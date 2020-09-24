@@ -1,0 +1,22 @@
+{
+  "name": "@ranlab/api",
+  "version": "0.0.0",
+  "license": "UNLICENSED",
+  "private": true,
+  "description": "API for the RAnLab app",
+  "main": "src/index.js",
+  "scripts": {
+    "test": ":"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RAnLabNL/RAnLab-api.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RAnLabNL/RAnLab-api/issues"
+  },
+  "homepage": "https://github.com/RAnLabNL/RAnLab-api#readme",
+  "devDependencies": {
+    "typescript": "^4.0.3"
+  }
+}
