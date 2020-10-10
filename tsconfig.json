@@ -3,7 +3,7 @@
     /* Basic Options */
     "incremental": true,
     "target": "ES2017",
-    "module": "esnext",
+    "module": "CommonJS",
     "declaration": true,
 
     /* Strict Type-Checking Options */

@@ -1,0 +1,26 @@
+name: Build & test
+on: [ push ]
+jobs:
+  tests:
+    name: Build & test
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - name: Run tests
+        run: |
+          yarn
+          yarn test
+  completed:
+    name: All jobs completed
+    runs-on: ubuntu-20.04
+    needs:
+      - tests
+    steps:
+      - name: Success message
+        run: |
+          printf '%s\n' 'All jobs completed'
