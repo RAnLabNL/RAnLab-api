@@ -16,6 +16,9 @@
     "url": "https://github.com/RAnLabNL/RAnLab-api/issues"
   },
   "homepage": "https://github.com/RAnLabNL/RAnLab-api#readme",
+  "engines": {
+    "node": ">=12"
+  },
   "devDependencies": {
     "typescript": "^4.0.3"
   }
