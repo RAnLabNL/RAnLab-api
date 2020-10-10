@@ -1,9 +1,12 @@
 import fastify from 'fastify';
+import createPingEndpoint from './endpoints/ping';
+import { addRoutes } from './utils';
 
 const port = Number(process.env.PORT || 8080);
-const server = fastify();
-
-server.get('/ping', async () => `${JSON.stringify({ status: 'ok', date: Date.now() })}\n`);
+const server = addRoutes(
+  fastify(),
+  createPingEndpoint,
+);
 
 server.listen(port, '::', (err, address) => {
   if (err) {
