@@ -1,14 +1,14 @@
 import type {FastifyInstance, RequestGenericInterface} from 'fastify';
 import {firestore} from "../database/firestore";
 
-interface RegionBusinessRequest extends RequestGenericInterface {
+interface GetRegionBusinessRequest extends RequestGenericInterface {
   Params: {
     regionId: number
   }
 }
 
 export default function createRegionBusinessesEndpoint(app: FastifyInstance) {
-  app.get<RegionBusinessRequest>('/regions/:regionId/businesses',
+  app.get<GetRegionBusinessRequest>('/regions/:regionId/businesses',
     async (request) => {
       let response = {
         status: "ok",
