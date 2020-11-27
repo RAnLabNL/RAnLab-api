@@ -2,11 +2,12 @@ import {dataLayer, Region} from "../src/database/dataLayer";
 import {firestore} from "../src/database/firestore";
 import {Business} from "../src/endpoints/businesses";
 
-afterEach(async() => {
+afterEach(async(done) => {
   let bizDocs = (await firestore.collection("businesses").where("name", "==", "DummyBiz").get()).docs;
   bizDocs.forEach((d) => d.ref.delete());
   await firestore.collection("years").doc("2019").delete();
   await firestore.collection("regions").doc("DummyRegion").delete();
+  done();
 });
 
 test("Creates and retrieves businesses", async (done) => {
