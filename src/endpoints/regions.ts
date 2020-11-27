@@ -1,17 +1,21 @@
-import type { FastifyInstance } from 'fastify';
-import {firestore} from "../database/firestore";
+import type {FastifyInstance, RequestGenericInterface} from 'fastify';
+import {DataLayer, Region} from "../database/dataLayer";
 
-export default function createRegionsEndpoint(app: FastifyInstance) {
-  app.get('/regions',
-    async () => {
+interface GetManagedRegionsRequest extends RequestGenericInterface {
+  Params: {
+    managerId: string
+  }
+}
+
+export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : DataLayer) {
+  app.get<GetManagedRegionsRequest>('/regions/:managerId',
+    async (request) => {
       let response = {
         status: "ok",
         date: Date.now(),
-        regions: <any>[]
+        regions: <Region[]>[]
       }
-      let regionsSnapshot = await firestore.collection("regions").get();
-      response.regions = await regionsSnapshot.docs.map((r) => ({'id': r.id, 'data': r.data()}));
-      console.log(response);
+      response.regions = await dataLayer.getRegionsManagedBy(request.params.managerId);
       return JSON.stringify(response);
     }
   );

@@ -1,5 +1,5 @@
 import type {FastifyInstance, RequestGenericInterface} from 'fastify';
-import {firestore} from "../database/firestore";
+import {DataLayer} from "../database/dataLayer";
 
 interface GetFiltersRequest extends RequestGenericInterface {
   Params: {
@@ -7,17 +7,16 @@ interface GetFiltersRequest extends RequestGenericInterface {
   }
 }
 
-export default function createFiltersEndpoint(app: FastifyInstance) {
+export default function createFiltersEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
   app.get<GetFiltersRequest>('/filters',
     async () => {
       let response = {
         status: "ok",
         date: Date.now(),
-        years: <number[]>[]
+        years: <number[] | undefined> []
       }
-      let yearsSnapshot = await firestore.collection("years").get();
-      response.years = await yearsSnapshot.docs.map((b) => Number.parseInt(b.id));
-      console.log(response);
+
+      response.years = (await dataLayer.getFilters()).years;
       return JSON.stringify(response);
     }
   );

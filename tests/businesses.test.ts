@@ -1,26 +1,25 @@
-import createRegionBusinessesEndpoint from "../src/endpoints/regionBusinesses";
 import {fastify} from "fastify";
-import createBusinessesEndpoint from "../src/endpoints/businesses";
+import {dummyDataLayer} from "./utils/dummyDatalayer";
+import createBusinessesEndpoint, {Business} from "../src/endpoints/businesses";
 
 test('creates and retrieves a valid business', async(done) => {
-  const app1 = createBusinessesEndpoint(fastify());
-  const app2 = createRegionBusinessesEndpoint(fastify());
-  const response1 = await app1.inject({
+  const bizApp = createBusinessesEndpoint(fastify(), dummyDataLayer);
+  const response1 = await bizApp.inject({
     method: 'POST',
     url: '/businesses',
     payload: {name: "DummyBiz", region: "DummyRegion", year_added: 2009}
   });
   expect(response1.statusCode).toBe(200);
 
-  const response2 = await app2.inject({
+  const response2 = await bizApp.inject({
     method: 'GET',
     url: '/regions/DummyRegion/businesses'
   });
 
   expect(response2.statusCode).toBe(200);
-  expect(JSON.parse(response2.payload).businesses).toEqual(expect.arrayContaining(expect.objectContaining({name: "DummyBiz"})));
+  let businesses: Business[] = JSON.parse(response2.payload).businesses;
+  expect(businesses).toEqual(expect.arrayContaining([expect.objectContaining({name: "DummyBiz"})]));
 
-  await app1.close();
-  await app2.close();
+  await bizApp.close();
   done();
 })
