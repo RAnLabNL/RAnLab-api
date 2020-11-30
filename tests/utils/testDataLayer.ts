@@ -1,4 +1,4 @@
-import {DataLayer, Filters, IdObject, Region} from "../../src/database/dataLayer";
+import {DataLayer, Filters, IdObject, Region} from "../../src/database/productionDataLayer";
 import {Business} from "../../src/endpoints/businesses";
 
 class DummyDatalayer implements DataLayer {
@@ -30,4 +30,4 @@ class DummyDatalayer implements DataLayer {
   }
 }
 
-export const dummyDataLayer = new DummyDatalayer();
+export const testDataLayer = new DummyDatalayer();

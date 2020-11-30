@@ -1,5 +1,5 @@
 import type {FastifyInstance, RequestGenericInterface} from 'fastify';
-import {DataLayer} from "../database/dataLayer";
+import {DataLayer} from "../database/productionDataLayer";
 import firebase from "firebase";
 import GeoPoint = firebase.firestore.GeoPoint;
 

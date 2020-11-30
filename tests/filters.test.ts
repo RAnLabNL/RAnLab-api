@@ -1,10 +1,10 @@
 import {fastify} from "fastify";
 import createFiltersEndpoint from "../src/endpoints/filters";
 import createBusinessesEndpoint from "../src/endpoints/businesses";
-import {dummyDataLayer} from "./utils/dummyDatalayer";
+import {testDataLayer} from "./utils/testDataLayer";
 
 beforeAll(async (done) => {
-  const bizApp = createBusinessesEndpoint(fastify(), dummyDataLayer);
+  const bizApp = createBusinessesEndpoint(fastify(), testDataLayer);
   const response1 = await bizApp.inject({
     method: 'POST',
     url: '/businesses',
@@ -15,7 +15,7 @@ beforeAll(async (done) => {
 })
 
 test('Returns the filter data added previously', async (done) => {
-  const filterApp = createFiltersEndpoint(fastify(), dummyDataLayer);
+  const filterApp = createFiltersEndpoint(fastify(), testDataLayer);
   const filterResponse  = await filterApp.inject({ method: 'GET', url: '/filters' });
 
   expect(filterResponse.statusCode).toBe(200);

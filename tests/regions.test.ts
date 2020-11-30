@@ -1,16 +1,16 @@
 import createRegionsEndpoint from "../src/endpoints/regions";
 import {fastify} from "fastify";
-import {dummyDataLayer} from "./utils/dummyDatalayer";
+import {testDataLayer} from "./utils/testDataLayer";
 
 beforeEach(async (done) => {
-  await dummyDataLayer.setRegion({
+  await testDataLayer.setRegion({
     id: "DummyRegion", manager: "dummyManagerId"
   });
   done();
 });
 
 test('Successfully retrieves the region by manager ID', async (done) => {
-  const app = createRegionsEndpoint(fastify(), dummyDataLayer);
+  const app = createRegionsEndpoint(fastify(), testDataLayer);
   const response = await app.inject({ method: 'GET', url: '/regions/dummyManagerId' });
 
   expect(response.statusCode).toBe(200);

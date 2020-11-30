@@ -53,4 +53,4 @@ export class ProductionDataLayer implements DataLayer {
   }
 }
 
-export const dataLayer = new ProductionDataLayer();
+export const productionDataLayer = new ProductionDataLayer();

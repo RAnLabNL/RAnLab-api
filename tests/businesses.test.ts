@@ -1,9 +1,9 @@
 import {fastify} from "fastify";
-import {dummyDataLayer} from "./utils/dummyDatalayer";
+import {testDataLayer} from "./utils/testDataLayer";
 import createBusinessesEndpoint, {Business} from "../src/endpoints/businesses";
 
 test('creates and retrieves a valid business', async(done) => {
-  const bizApp = createBusinessesEndpoint(fastify(), dummyDataLayer);
+  const bizApp = createBusinessesEndpoint(fastify(), testDataLayer);
   const response1 = await bizApp.inject({
     method: 'POST',
     url: '/businesses',

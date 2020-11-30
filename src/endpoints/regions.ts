@@ -1,5 +1,5 @@
 import type {FastifyInstance, RequestGenericInterface} from 'fastify';
-import {DataLayer, Region} from "../database/dataLayer";
+import {DataLayer, Region} from "../database/productionDataLayer";
 
 interface GetManagedRegionsRequest extends RequestGenericInterface {
   Params: {
