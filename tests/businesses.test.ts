@@ -1,24 +1,36 @@
 import {fastify} from "fastify";
 import {testDataLayer} from "./utils/testDataLayer";
-import createBusinessesEndpoint, {Business} from "../src/endpoints/businesses";
+import createBusinessesEndpoint from "../src/endpoints/businesses";
+import {createDummyBusiness, DummyBiz, DummyRegion} from "./utils/dummyData";
 
-test('creates and retrieves a valid business', async(done) => {
+it('Can create and retrieve a valid business', async(done) => {
   const bizApp = createBusinessesEndpoint(fastify(), testDataLayer);
-  const response1 = await bizApp.inject({
-    method: 'POST',
-    url: '/businesses',
-    payload: {name: "DummyBiz", region: "DummyRegion", year_added: 2009}
-  });
-  expect(response1.statusCode).toBe(200);
+  const createResponse = await createDummyBusiness(bizApp);
+  expect(createResponse.statusCode).toBe(200);
 
-  const response2 = await bizApp.inject({
+  const getResponse = await bizApp.inject({
     method: 'GET',
-    url: '/regions/DummyRegion/businesses'
+    url: `/regions/${DummyRegion.id}/businesses`
   });
 
-  expect(response2.statusCode).toBe(200);
-  let businesses: Business[] = JSON.parse(response2.payload).businesses;
-  expect(businesses).toEqual(expect.arrayContaining([expect.objectContaining({name: "DummyBiz"})]));
+  expect(getResponse.statusCode).toBe(200);
+  expect(JSON.parse(getResponse.payload).businesses).toEqual(expect.arrayContaining([expect.objectContaining({name: DummyBiz.name})]));
+
+  await bizApp.close();
+  done();
+});
+
+it('Can update and retrieve a business', async(done) => {
+  const bizApp = createBusinessesEndpoint(fastify(), testDataLayer);
+  const bizId = JSON.parse((await createDummyBusiness(bizApp)).payload).businessId;
+  const updatedBiz = {...DummyBiz, id: bizId, year_added: 2020, employees: 2};
+  const updateResponse = await bizApp.inject({
+    method: 'POST',
+    url: `/businesses/${bizId}`,
+    payload: updatedBiz
+  });
+  expect(updateResponse.statusCode).toBe(200);
+  expect(JSON.parse(updateResponse.payload).business).toEqual(updatedBiz);
 
   await bizApp.close();
   done();

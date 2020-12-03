@@ -14,7 +14,7 @@ class DummyDatalayer implements DataLayer {
     return {id:"1"};
   }
 
-  async getFilters(): Promise<Filters> {
+  async getFilters(_: string): Promise<Filters> {
     return {
       years: this.businesses.map((b) => b.year_added)
     };
@@ -27,6 +27,10 @@ class DummyDatalayer implements DataLayer {
 
   async getRegionsManagedBy(managerId: string ): Promise<Region[]> {
     return this.regions.filter((r) => managerId === r.manager);
+  }
+
+  async deleteRegion(regionId: string): Promise<void> {
+    this.regions = this.regions.filter((r) => r.id == regionId);
   }
 }
 

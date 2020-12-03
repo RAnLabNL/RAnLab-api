@@ -13,6 +13,13 @@ interface CreateBusinessRequest extends RequestGenericInterface {
   Body: Business
 }
 
+interface UpdateBusinessRequest extends RequestGenericInterface {
+  Params: {
+    businessId: string
+  },
+  Body: Business
+}
+
 export interface Business {
   id?: string | undefined;
   name: string;
@@ -21,6 +28,7 @@ export interface Business {
   year_added: number;
   location?: GeoPoint | null | undefined
 }
+
 
 export default function createRegionBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
   app.get<GetRegionBusinessRequest>('/regions/:region/businesses',
@@ -46,7 +54,22 @@ export default function createRegionBusinessesEndpoint(app: FastifyInstance, dat
         businessId: businessRef.id
       };
       return JSON.stringify(response);
-    });
+    }
+  );
+
+  app.post<UpdateBusinessRequest>(
+    '/businesses/:businessId',
+    async (request) => {
+      let updatedBiz = {...request.body, id: request.params.businessId};
+      await dataLayer.setBusiness(updatedBiz);
+      let response = {
+        status: "ok",
+        date: Date.now(),
+        business: updatedBiz
+      };
+      return JSON.stringify(response);
+    }
+  );
 
   return app;
 }

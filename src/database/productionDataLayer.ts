@@ -13,9 +13,10 @@ export interface Region {
 export interface DataLayer {
   setBusiness(business: Business) : Promise<IdObject>;
   getBusinessesByRegion(region: string): Promise<Business[]>;
-  getFilters() : Promise<Filters>;
+  getFilters(regionId: string) : Promise<Filters>;
   getRegionsManagedBy(managerId: string) : Promise<Region[]>;
   setRegion(region: Region): Promise<IdObject>;
+  deleteRegion(regionId: string): Promise<void>;
 }
 
 export interface Filters {
@@ -36,10 +37,11 @@ export class ProductionDataLayer implements DataLayer {
     return <IdObject>{id: businessRef.id};
   }
 
-  async getFilters() : Promise<Filters>{
+  async getFilters(region: string) : Promise<Filters>{
     return {
-      years: [2019]
-    }
+      years: (await firestore.collection("businesses").where("region", "==", region).get()).docs
+                .map((b) => <number>((<Business>b.data()).year_added))
+    };
   }
 
   async getRegionsManagedBy(managerId: string): Promise<Region[]> {
@@ -50,6 +52,14 @@ export class ProductionDataLayer implements DataLayer {
   async setRegion(region: Region): Promise<IdObject> {
     await firestore.collection("regions").doc(region.id).set({"manager": region.manager});
     return {id: region.id};
+  }
+
+  async deleteRegion(id: string): Promise<void> {
+    await firestore.collection("regions").doc(id).delete();
+  }
+
+  async deleteBusiness(id: string) {
+    await firestore.collection("businesses").doc(id).delete();
   }
 }
 

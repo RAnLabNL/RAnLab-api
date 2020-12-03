@@ -10,9 +10,9 @@ afterEach(async(done) => {
   done();
 });
 
-test("Creates and retrieves businesses", async (done) => {
+it("Creates, retrieves, updates, and deletes businesses", async (done) => {
   let biz : Business = {
-    employees: 21,
+    employees: 1,
     name: "DummyBiz",
     region: "DummyRegion",
     year_added: 2019
@@ -20,14 +20,35 @@ test("Creates and retrieves businesses", async (done) => {
   let id = (await productionDataLayer.setBusiness(biz)).id;
   expect(id).toBeTruthy();
 
-  let out = await productionDataLayer.getBusinessesByRegion("DummyRegion");
-  expect(out).toEqual(expect.arrayContaining([expect.objectContaining(biz)]));
-  let filters = await productionDataLayer.getFilters();
-  expect(filters).toEqual(expect.objectContaining({years: expect.arrayContaining([2019])}))
+  let bizData = await productionDataLayer.getBusinessesByRegion(biz.region);
+  expect(bizData).toEqual(expect.arrayContaining([expect.objectContaining(biz)]));
+
+  let filters = await productionDataLayer.getFilters(biz.region);
+  expect(filters).toEqual(expect.objectContaining({years: expect.arrayContaining([biz.year_added])}))
+
+  biz.id = id;
+  biz.employees = 2;
+  biz.year_added = 2020;
+  let updatedId = (await productionDataLayer.setBusiness(biz)).id;
+  expect(updatedId).toEqual(id);
+
+  let updatedBizData = await productionDataLayer.getBusinessesByRegion(biz.region);
+  expect(updatedBizData).toEqual(expect.arrayContaining([expect.objectContaining(biz)]));
+
+  let updatedFilters = await productionDataLayer.getFilters(biz.region);
+  expect(updatedFilters).toEqual(expect.objectContaining({years: expect.arrayContaining([biz.year_added])}))
+
+  await productionDataLayer.deleteBusiness(biz.id);
+  let emptyBizData = await productionDataLayer.getBusinessesByRegion(biz.region);
+  expect(emptyBizData).toEqual([]);
+
+  let emptyFilters = await productionDataLayer.getFilters(biz.region);
+  expect(emptyFilters.years).toEqual([]);
+
   done();
 });
 
-test("Creates and retrieves regions", async (done) => {
+it("Creates, retrieves, updates, and deletes regions", async (done) => {
   let region: Region = {
     id: "DummyRegion",
     manager: "Dummy Manager"
@@ -38,5 +59,20 @@ test("Creates and retrieves regions", async (done) => {
 
   let out = await productionDataLayer.getRegionsManagedBy("Dummy Manager");
   expect(out).toEqual(expect.arrayContaining([region]));
+
+  region.manager = "New Manager";
+  let updatedId = (await productionDataLayer.setRegion(region));
+  expect(updatedId.id).toEqual(region.id);
+
+  let oldManagerRegions = await productionDataLayer.getRegionsManagedBy("Dummy Manager");
+  expect(oldManagerRegions).toEqual(expect.arrayContaining([]));
+
+  let newManagerRegions = await productionDataLayer.getRegionsManagedBy(region.manager);
+  expect(newManagerRegions).toEqual(expect.arrayContaining([region]));
+
+  await productionDataLayer.deleteRegion(region.id);
+  let empty = await productionDataLayer.getRegionsManagedBy(region.manager);
+  expect(empty).toEqual([]);
+
   done();
 });
