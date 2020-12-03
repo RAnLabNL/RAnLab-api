@@ -3,5 +3,6 @@
 #  gcloud auth configure-docker northamerica-northeast1-docker.pkg.dev
 docker build -t ranlab-mvp-api:latest .
 docker tag ranlab-mvp-api:latest northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest
+gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
 docker push northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest
-gcloud run --platform=managed  deploy ranlab-api-mvp --image northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest
+gcloud run --platform=managed --region=northamerica-northeast1  deploy ranlab-api-mvp --image northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest
