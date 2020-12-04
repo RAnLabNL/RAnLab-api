@@ -1,6 +1,7 @@
 name: Deploy to Google Cloud Run
 on:
-  release
+  release:
+    types: [published]
 jobs:
   build:
     name: Build image
