@@ -1,0 +1,44 @@
+name: Deploy to Google Cloud Run
+on:
+  release:
+    types: [published]
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    env:
+      HASH: $(git rev-parse --short "$GITHUB_SHA")
+      BRANCH: ${GITHUB_REF##*/}
+      SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+      PROJECT_ID: ${{ secrets.PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Setup gcloud CLI
+      - uses: google-github-actions/github-actions/setup-gcloud@master
+        with:
+          service_account_key: ${{ secrets.GCR_DEVOPS_SERVICE_ACCOUNT_KEY }}
+          project_id: ${{ secrets.PROJECT_ID }}
+          export_default_credentials: true
+          
+      # Build docker image
+      - name: Build Docker Image
+        run: |-
+          docker build --build-arg -t northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest .
+      # Configure docker to use the gcloud command-line tool as a credential helper
+      - run: |
+          gcloud auth configure-docker -q
+      # Push image to Google Container Registry
+      - name: Push Image to GCR
+        run: |-
+          docker push northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest
+      - name: Deploy Container
+        run: |-
+          gcloud run 
+            deploy ranlab-api-mvp \
+            --quiet
+            --platform=managed \
+            --region=northamerica-northeast1 \
+            --allow-unauthenticated \
+            --image northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest
