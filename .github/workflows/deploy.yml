@@ -36,7 +36,7 @@ jobs:
           docker push northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest
       - name: Deploy Container
         run: |-
-          gcloud run 
+          gcloud run \
             deploy ranlab-api-mvp \
             --quiet
             --platform=managed \
