@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -u
+set -o pipefail
+
+readonly all_files=$( find src -type f -name '*.test.js' )
+
+for f in ${1:-$all_files}
+do
+  output=$(node "$f")
+  status="$?"
+  if [[ "$status" -eq 0 ]]
+  then
+    printf '%s' "${output}"
+  else
+    printf '%s\n' "${output}"
+    exit "$status"
+  fi
+done
