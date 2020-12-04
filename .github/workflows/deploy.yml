@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
+      - run: yarn build
       # Setup gcloud CLI
       - uses: google-github-actions/github-actions/setup-gcloud@master
         with:
@@ -36,7 +36,7 @@ jobs:
           docker push northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest
       - name: Deploy Container
         run: |-
-          gcloud run 
+          gcloud run
             deploy ranlab-api-mvp \
             --quiet
             --platform=managed \
