@@ -29,16 +29,16 @@ jobs:
           docker build -t northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest .
       # Configure docker to use the gcloud command-line tool as a credential helper
       - run: |
-          gcloud auth configure-docker -q
+          gcloud auth configure-docker -q northamerica-northeast1-docker.pkg.dev
       # Push image to Google Container Registry
       - name: Push Image to GCR
         run: |-
           docker push northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest
       - name: Deploy Container
         run: |-
-          gcloud run
+          gcloud run \
             deploy ranlab-api-mvp \
-            --quiet
+            --quiet \
             --platform=managed \
             --region=northamerica-northeast1 \
             --allow-unauthenticated \
