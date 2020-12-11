@@ -1080,6 +1080,23 @@ aws-sign2@~0.7.0:
   version "0.7.0"
   resolved "https://registry.yarnpkg.com/aws-sign2/-/aws-sign2-0.7.0.tgz#b46e890934a9591f2d2f6f86d7e6a9f1b3fe76a8"
   integrity sha1-tG6JCTSpWR8tL2+G1+ap8bP+dqg=
+  
+barecolor@1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/barecolor/-/barecolor-1.0.1.tgz#1bbbbfc41cedecf74e23fb7d9d054cd8763d92cc"
+  integrity sha512-ncJ680U+r1CGBt73L3O6V9GIAPy3hbDmWODEQajwEnDmmzeStvc4UYhapUSxUpS76+MHxyRihzZfwhyl122Zdw==
+
+baretest@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/baretest/-/baretest-2.0.0.tgz#5791667b47329c452e1f9bade879ab8dc0b304ba"
+  integrity sha512-hRmYnBojeijT3jH0GtqLoHus+adPoeYh2NmcNT3wBPH903AUphcFqs1gJ64fBovDXql51Df24g9D9jcXRZd4vA==
+  dependencies:
+    barecolor "1.0.1"
+
+cookie@^0.4.0:
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/cookie/-/cookie-0.4.1.tgz#afd713fe26ebd21ba95ceb61f9a8116e50a537d1"
+  integrity sha512-ZwrFkGJxUR3EIoXtO+yVE69Eb7KlixbaeAWfBQB9vVsNn/o+Yw69gBWSSDK825hQNdN+wF8zELf3dFNl/kxkUA==
 
 aws4@^1.8.0:
   version "1.11.0"

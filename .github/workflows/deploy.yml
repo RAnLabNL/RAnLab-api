@@ -25,7 +25,7 @@ jobs:
       # Build docker image
       - name: Build Docker Image
         run: |-
-          docker build --build-arg -t northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest .
+          docker build -t northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest .
       # Configure docker to use the gcloud command-line tool as a credential helper
       - run: |
           gcloud auth configure-docker -q
