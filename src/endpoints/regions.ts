@@ -25,15 +25,16 @@ interface UpdateRegionRequest extends RequestGenericInterface {
 }
 
 export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : DataLayer) {
-  app.get<GetManagedRegionsRequest>('/regions/:managerId',
+  app.get<GetManagedRegionsRequest>('/regions',
     async (request) => {
+      let {userId}  = <{userId:string}>await request.jwtVerify();
       let response = {
         statusCode: 200,
         status: "ok",
         date: Date.now(),
         regions: <Region[]>[]
       }
-      response.regions.push(...(await dataLayer.getRegionsManagedBy(request.params.managerId)));
+      response.regions.push(...(await dataLayer.getRegionsManagedBy(userId)));
       return JSON.stringify(response);
     }
   );
@@ -63,9 +64,14 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
   );
 
   app.delete<DeleteRegionRequest>('/regions/:regionId',
-    async(request, reply) => {
-      await dataLayer.deleteRegion(request.params.regionId);
-      reply.code(204);
+    async (request, reply) => {
+      let {userId} = <{userId:string}>await request.jwtVerify();
+      if((await dataLayer.getRegionsManagedBy(userId)).find((r) => r.id === request.params.regionId)) {
+        await dataLayer.deleteRegion(request.params.regionId);
+        reply.code(204);
+      } else {
+        reply.code(401);
+      }
     }
   );
   return app;

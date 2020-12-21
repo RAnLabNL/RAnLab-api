@@ -5,6 +5,7 @@ import createRegionBusinessesEndpoint from "./endpoints/businesses";
 import createRegionsEndpoint from "./endpoints/regions";
 import {productionDataLayer} from "./database/productionDataLayer";
 import createFiltersEndpoint from "./endpoints/filters";
+import {registerAuth0} from "./auth0";
 
 const port = Number(process.env.PORT || 8080);
 const server = addRoutes(
@@ -14,6 +15,8 @@ const server = addRoutes(
   (app: FastifyInstance) => createRegionBusinessesEndpoint(app, productionDataLayer),
   (app: FastifyInstance) => createRegionsEndpoint(app, productionDataLayer)
 );
+
+registerAuth0(server);
 
 server.listen(port, '::', (err, address) => {
   if (err) {

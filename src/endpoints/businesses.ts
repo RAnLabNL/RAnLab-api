@@ -6,6 +6,9 @@ import GeoPoint = firebase.firestore.GeoPoint;
 interface GetRegionBusinessRequest extends RequestGenericInterface {
   Params: {
     region: string
+  },
+  Headers: {
+    access_token: string
   }
 }
 
@@ -28,7 +31,6 @@ export interface Business {
   year_added: number;
   location?: GeoPoint | null | undefined
 }
-
 
 export default function createRegionBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
   app.get<GetRegionBusinessRequest>('/regions/:region/businesses',

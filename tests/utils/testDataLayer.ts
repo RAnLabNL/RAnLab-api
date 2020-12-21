@@ -30,7 +30,11 @@ class DummyDatalayer implements DataLayer {
   }
 
   async deleteRegion(regionId: string): Promise<void> {
-    this.regions = this.regions.filter((r) => r.id == regionId);
+    this.regions = this.regions.filter((r) => r.id !== regionId);
+  }
+
+  clearRegions() {
+    this.regions = [];
   }
 }
 
