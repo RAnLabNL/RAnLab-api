@@ -3,16 +3,20 @@ import fastifyJWT, {FastifyJWTOptions} from "fastify-jwt";
 import jwt from "jsonwebtoken";
 
 export const mockSecret = 'dummy';
-export const mockAuth0Return = {
-  user: <string|null>null,
-  callCount: 0
-};
+export class MockAuth0Return {
+  user: string|null = null;
+  callCount: number = 0;
+  reset() {
+    this.callCount = 0;
+    this.user = null
+  }
+}
 
 export function getMockToken(payload: object) {
   return  jwt.sign(payload, mockSecret)
 }
 
-export const testify = () => {
+export const testify = (mockAuth0Return : MockAuth0Return) => {
   const f = fastify();
   f.register(fastifyJWT, <FastifyJWTOptions>{
     secret: (_request, _reply, _provider) => { mockAuth0Return.callCount++; _provider(null, mockSecret);},

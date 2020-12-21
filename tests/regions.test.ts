@@ -1,57 +1,82 @@
 import createRegionsEndpoint from "../src/endpoints/regions";
-import {testify, mockAuth0Return} from "./utils/testify";
-import {testDataLayer} from "./utils/testDataLayer";
-import {DummyRegion, dummyToken, requestDummyManagedRegions} from "./utils/dummyData";
+import {testify, getMockToken, MockAuth0Return} from "./utils/testify";
+import {DummyDatalayer} from "./utils/testDataLayer";
+import {DummyRegion, dummyToken, getDummyRegions} from "./utils/dummyData";
+import {Region} from "../src/database/productionDataLayer";
+import {FastifyInstance} from "fastify";
 
-beforeEach(async (done) => {
-  testDataLayer.clearRegions();
-  await testDataLayer.setRegion(DummyRegion);
-  done();
-});
 
-test('Can create and retrieve a region by manager ID', async (done) => {
-  const app = createRegionsEndpoint(testify(), testDataLayer);
-  mockAuth0Return.user = "DummyUser";
-  const response = await requestDummyManagedRegions(app);
+describe("Region Endpoint Tests", () => {
+  let testDataLayer: DummyDatalayer;
+  let mockAuth0Return: MockAuth0Return;
+  let testApp: FastifyInstance;
 
-  expect(mockAuth0Return.callCount).toBe(1);
-  expect(response.statusCode).toBe(200);
-  expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([DummyRegion]));
-  await app.close();
-  done();
-});
-
-it('Can update and retrieve a region', async (done) => {
-  const app = createRegionsEndpoint(testify(), testDataLayer);
-  const updatedRegion = {
-    id: "TestRegion",
-    manager: "TestManager"
-  };
-  const response = await app.inject( {
-    method: 'POST',
-    url: `/regions/${DummyRegion.id}`,
-    payload: updatedRegion
+  beforeEach(async (done) => {
+    testDataLayer= new DummyDatalayer()
+    mockAuth0Return = new MockAuth0Return();
+    testApp = testify(mockAuth0Return);
+    await testDataLayer.setRegion(DummyRegion);
+    done();
   });
 
-  expect(response.statusCode).toBe(200);
-  expect(JSON.parse(response.payload).region).toEqual(updatedRegion);
-  await app.close();
-  done();
-});
+  test('Can create and retrieve all regions as SysAdmin', async (done) => {
+    const app = createRegionsEndpoint(testApp, testDataLayer);
+    let testRegions: Region[] = [{id: "region1", manager: "manager1"}, {id: "region2", manager: "manager2"}];
+    testRegions.forEach((r) => testDataLayer.setRegion(r));
+    mockAuth0Return.user = "DummyUser";
+    const response = await getDummyRegions(app, getMockToken({userId: 'admin', admin: true}));
 
-it('Can delete a region', async (done) => {
-  const app = createRegionsEndpoint(await testify(), testDataLayer);
-  const deleteResponse = await app.inject( {
-    method: 'DELETE',
-    url: `/regions/${DummyRegion.id}`,
-    headers: {authorization: `Bearer ${dummyToken}`}
+    expect(mockAuth0Return.callCount).toBe(1);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([...testRegions, DummyRegion]));
+    await app.close();
+    done();
   });
 
-  expect(deleteResponse.statusCode).toBe(204);
+  test('Can create and retrieve a region as Region Manager', async (done) => {
+    const app = createRegionsEndpoint(testApp, testDataLayer);
+    mockAuth0Return.user = "DummyUser";
+    const response = await getDummyRegions(app);
 
-  const getResponse = await requestDummyManagedRegions(app);
-  expect(JSON.parse(getResponse.payload).regions).toEqual([]);
+    expect(mockAuth0Return.callCount).toBe(1);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([DummyRegion]));
+    await app.close();
+    done();
+  });
 
-  await app.close();
-  done();
-});
+  it('Can update and retrieve a region', async (done) => {
+    const app = createRegionsEndpoint(testApp, testDataLayer);
+    const updatedRegion = {
+      id: "TestRegion",
+      manager: "TestManager"
+    };
+    const response = await app.inject( {
+      method: 'POST',
+      url: `/regions/${DummyRegion.id}`,
+      payload: updatedRegion
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.payload).region).toEqual(updatedRegion);
+    await app.close();
+    done();
+  });
+
+  it('Can delete a region', async (done) => {
+    const app = createRegionsEndpoint(testApp, testDataLayer);
+    const deleteResponse = await app.inject( {
+      method: 'DELETE',
+      url: `/regions/${DummyRegion.id}`,
+      headers: {authorization: `Bearer ${dummyToken}`}
+    });
+
+    expect(deleteResponse.statusCode).toBe(204);
+
+    const getResponse = await getDummyRegions(app);
+    expect(JSON.parse(getResponse.payload).regions).toEqual([]);
+
+    await app.close();
+    done();
+  });
+})

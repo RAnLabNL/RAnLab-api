@@ -27,14 +27,18 @@ interface UpdateRegionRequest extends RequestGenericInterface {
 export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : DataLayer) {
   app.get<GetManagedRegionsRequest>('/regions',
     async (request) => {
-      let {userId}  = <{userId:string}>await request.jwtVerify();
+      let {userId, admin}  = <{userId:string, admin: boolean}>await request.jwtVerify();
       let response = {
         statusCode: 200,
         status: "ok",
         date: Date.now(),
         regions: <Region[]>[]
       }
-      response.regions.push(...(await dataLayer.getRegionsManagedBy(userId)));
+      if(admin) {
+        response.regions.push(...(await dataLayer.getAllRegions()));
+      } else {
+        response.regions.push(...(await dataLayer.getRegionsManagedBy(userId)));
+      }
       return JSON.stringify(response);
     }
   );

@@ -1,7 +1,7 @@
 import {DataLayer, Filters, IdObject, Region} from "../../src/database/productionDataLayer";
 import {Business} from "../../src/endpoints/businesses";
 
-class DummyDatalayer implements DataLayer {
+export class DummyDatalayer implements DataLayer {
   businesses: Business[] = [];
   regions: Region[] = [];
 
@@ -25,6 +25,10 @@ class DummyDatalayer implements DataLayer {
     return {id: region.id};
   }
 
+  async getAllRegions() : Promise<Region[]> {
+    return this.regions;
+  }
+
   async getRegionsManagedBy(managerId: string ): Promise<Region[]> {
     return this.regions.filter((r) => managerId === r.manager);
   }
@@ -37,5 +41,3 @@ class DummyDatalayer implements DataLayer {
     this.regions = [];
   }
 }
-
-export const testDataLayer = new DummyDatalayer();

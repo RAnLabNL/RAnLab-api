@@ -26,6 +26,6 @@ export async function createDummyBusiness(bizApp: FastifyInstance) {
   });
 }
 
-export async function requestDummyManagedRegions(app: FastifyInstance) {
-  return await app.inject({method: 'GET', headers: {authorization: `Bearer ${dummyToken}`}, url: `/regions`});
+export async function getDummyRegions(app: FastifyInstance, token: string = dummyToken) {
+  return await app.inject({method: 'GET', headers: {authorization: `Bearer ${token}`}, url: `/regions`});
 }
