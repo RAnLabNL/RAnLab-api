@@ -2,7 +2,7 @@ import {productionDataLayer, Region} from "../src/database/productionDataLayer";
 import {firestore} from "../src/database/firestore";
 import {Business} from "../src/endpoints/businesses";
 
-afterEach(async(done) => {
+beforeEach(async(done) => {
   let bizDocs = (await firestore.collection("businesses").where("name", "==", "DummyBiz").get()).docs;
   bizDocs.forEach((d) => d.ref.delete());
   await firestore.collection("years").doc("2019").delete();
