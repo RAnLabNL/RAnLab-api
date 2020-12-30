@@ -15,7 +15,8 @@ export const DummyBiz: Business = {
   name: "DummyBiz",
   region: DummyRegion.id,
   year_added: 2009,
-  employees: 1
+  employees: 1,
+  industry: "DummyIndustry"
 };
 
 export async function createDummyBusiness(bizApp: FastifyInstance) {

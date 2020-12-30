@@ -1,6 +1,6 @@
 import {fastify} from "fastify";
-import createFiltersEndpoint from "../src/endpoints/filters";
-import createBusinessesEndpoint from "../src/endpoints/businesses";
+import {createFiltersEndpoint} from "../src/endpoints/filters";
+import {createBusinessesEndpoint} from "../src/endpoints/businesses";
 import {DummyDatalayer} from "./utils/testDataLayer";
 import {createDummyBusiness, DummyBiz} from "./utils/dummyData";
 

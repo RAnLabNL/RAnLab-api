@@ -1,5 +1,5 @@
 import type {FastifyInstance, RequestGenericInterface} from 'fastify';
-import {DataLayer} from "../database/productionDataLayer";
+import {DataLayer, Filters} from "../database/productionDataLayer";
 import firebase from "firebase";
 import GeoPoint = firebase.firestore.GeoPoint;
 
@@ -28,6 +28,7 @@ export interface Business {
   name: string;
   employees: number;
   region: string;
+  industry: string;
   year_added: number;
   location?: GeoPoint | null | undefined
 }
@@ -41,9 +42,12 @@ export function createRegionBusinessesEndpoint(app: FastifyInstance, dataLayer: 
         region: request.params.region,
         businesses: <Business[]>[],
         pageStart: "1",
-        pageEnd: "2"
-      }
+        pageEnd: "2",
+        filters: <Filters>{}
+      };
+
       response.businesses = (await dataLayer.getBusinessesByRegion(request.params.region)).slice(0, 10);
+      response.filters = await dataLayer.getFilters(request.params.region);
       return JSON.stringify(response);
     }
   );

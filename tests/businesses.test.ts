@@ -23,8 +23,9 @@ describe("Business Endpoint Tests", () => {
     });
 
     expect(getResponse.statusCode).toBe(200);
-    expect(JSON.parse(getResponse.payload).businesses).toEqual(expect.arrayContaining([expect.objectContaining({name: DummyBiz.name})]));
-
+    let {businesses, filters} = JSON.parse(getResponse.payload);
+    expect(businesses).toEqual(expect.arrayContaining([expect.objectContaining({name: DummyBiz.name})]));
+    expect(filters).toEqual(expect.objectContaining({years: [DummyBiz.year_added], industries: [DummyBiz.industry]}))
     await bizApp.close();
     done();
   });

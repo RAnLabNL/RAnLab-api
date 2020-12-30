@@ -7,7 +7,7 @@ interface GetFiltersRequest extends RequestGenericInterface {
   }
 }
 
-export default function createFiltersEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
+export function createFiltersEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
   app.get<GetFiltersRequest>('/filters',
     async (request) => {
       let response = {

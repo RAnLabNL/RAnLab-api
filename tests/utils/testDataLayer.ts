@@ -16,7 +16,8 @@ export class DummyDatalayer implements DataLayer {
 
   async getFilters(_: string): Promise<Filters> {
     return {
-      years: this.businesses.map((b) => b.year_added)
+      years: this.businesses.map((b) => b.year_added),
+      industries: this.businesses.map((b) => b.industry)
     };
   }
 
