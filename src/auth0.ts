@@ -7,13 +7,13 @@ export function registerAuth0(fastify: FastifyInstance) {
     cache: true,
     rateLimit: true,
     jwksRequestsPerMinute: 5,
-    jwksUri: 'http://__tenant__.auth0.com/.well-known/jwks.json'
+    jwksUri: 'http://lesleychard.auth0.com/.well-known/jwks.json'
   });
 
   fastify.register(fastifyJwt, <FastifyJWTOptions>{
     secret: faSecretProvider,
     audience: 'https://api.example.com',
-    issuer: 'https://__tenant__.auth0.com/',
+    issuer: 'https://lesleychard.auth0.com/',
     algorithms: ['RS256'],
     decode: { complete: true },
   });

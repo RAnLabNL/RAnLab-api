@@ -1,7 +1,8 @@
 import {fastify} from "fastify";
 import {DummyDatalayer} from "./utils/testDataLayer";
-import createBusinessesEndpoint from "../src/endpoints/businesses";
+import {createBusinessesEndpoint, createRegionBusinessesEndpoint} from "../src/endpoints/businesses";
 import {createDummyBusiness, DummyBiz, DummyRegion} from "./utils/dummyData";
+import {MockAuth0Return, testify} from "./utils/testify";
 
 describe("Business Endpoint Tests", () => {
   let testDataLayer: DummyDatalayer;
@@ -10,11 +11,13 @@ describe("Business Endpoint Tests", () => {
     testDataLayer = new DummyDatalayer();
   });
   it('Can create and retrieve a valid business', async(done) => {
-    const bizApp = createBusinessesEndpoint(fastify(), testDataLayer);
+    const server = testify(new MockAuth0Return());
+    const bizApp = createBusinessesEndpoint(server, testDataLayer)
+    const regionBizApp = createRegionBusinessesEndpoint(server, testDataLayer);
     const createResponse = await createDummyBusiness(bizApp);
     expect(createResponse.statusCode).toBe(200);
 
-    const getResponse = await bizApp.inject({
+    const getResponse = await regionBizApp.inject({
       method: 'GET',
       url: `/regions/${DummyRegion.id}/businesses`
     });
@@ -23,6 +26,28 @@ describe("Business Endpoint Tests", () => {
     expect(JSON.parse(getResponse.payload).businesses).toEqual(expect.arrayContaining([expect.objectContaining({name: DummyBiz.name})]));
 
     await bizApp.close();
+    done();
+  });
+
+  it('Can paginate businesses', async(done) => {
+    const server = testify(new MockAuth0Return());
+    const bizApp = createBusinessesEndpoint(server, testDataLayer);
+    const regionBizApp = createRegionBusinessesEndpoint(server, testDataLayer);
+    for(let i = 0; i < 20; i++) {
+      await createDummyBusiness(bizApp);
+    }
+    const pagedResponse = await regionBizApp.inject({
+      method: "GET",
+      url: `/regions/${DummyRegion.id}/businesses`
+    });
+    expect(pagedResponse.statusCode).toBe(200);
+    const pagedPayload = JSON.parse(pagedResponse.payload);
+    expect(pagedPayload).toStrictEqual(expect.objectContaining({
+      businesses: expect.arrayContaining([expect.anything()]),
+      pageStart: expect.stringMatching("[a-z0-9]*"),
+      pageEnd: expect.stringMatching("[a-z0-9]*")
+    }));
+    expect(pagedPayload.businesses).toHaveLength(10);
     done();
   });
 

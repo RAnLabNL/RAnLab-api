@@ -1,7 +1,7 @@
 import fastify, {FastifyInstance} from 'fastify';
 import createPingEndpoint from './endpoints/ping';
 import { addRoutes } from './utils';
-import createRegionBusinessesEndpoint from "./endpoints/businesses";
+import {createRegionBusinessesEndpoint, createBusinessesEndpoint} from "./endpoints/businesses";
 import createRegionsEndpoint from "./endpoints/regions";
 import {productionDataLayer} from "./database/productionDataLayer";
 import createFiltersEndpoint from "./endpoints/filters";
@@ -12,8 +12,9 @@ const server = addRoutes(
   fastify(),
   createPingEndpoint,
   (app: FastifyInstance) => createFiltersEndpoint(app, productionDataLayer),
-  (app: FastifyInstance) => createRegionBusinessesEndpoint(app, productionDataLayer),
-  (app: FastifyInstance) => createRegionsEndpoint(app, productionDataLayer)
+  (app: FastifyInstance) => createRegionsEndpoint(app, productionDataLayer),
+  (app: FastifyInstance) => createBusinessesEndpoint(app, productionDataLayer),
+  (app: FastifyInstance) => createRegionBusinessesEndpoint(app, productionDataLayer)
 );
 
 registerAuth0(server);
