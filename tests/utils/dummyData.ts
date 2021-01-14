@@ -5,6 +5,7 @@ import {getMockToken} from "./testify";
 
 const dummyManager = "DummyManagerId";
 export const dummyToken = getMockToken({userId: dummyManager})
+export const dummyAdminToken = getMockToken({userId: "", admin: true});
 
 export const DummyRegion: Region = {
   id: "DummyRegion",

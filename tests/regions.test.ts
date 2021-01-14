@@ -1,7 +1,7 @@
 import createRegionsEndpoint from "../src/endpoints/regions";
 import {testify, getMockToken, MockAuth0Return} from "./utils/testify";
 import {DummyDatalayer} from "./utils/testDataLayer";
-import {DummyRegion, dummyToken, getDummyRegions} from "./utils/dummyData";
+import {dummyAdminToken, DummyRegion, dummyToken, getDummyRegions} from "./utils/dummyData";
 import {Region} from "../src/database/productionDataLayer";
 import {FastifyInstance} from "fastify";
 
@@ -19,7 +19,7 @@ describe("Region Endpoint Tests", () => {
     done();
   });
 
-  test('Can create and retrieve all regions as SysAdmin', async (done) => {
+  it('Can create and retrieve all regions as SysAdmin', async (done) => {
     const app = createRegionsEndpoint(testApp, testDataLayer);
     let testRegions: Region[] = [{id: "region1", manager: "manager1"}, {id: "region2", manager: "manager2"}];
     testRegions.forEach((r) => testDataLayer.setRegion(r));
@@ -33,7 +33,7 @@ describe("Region Endpoint Tests", () => {
     done();
   });
 
-  test('Can create and retrieve a region as Region Manager', async (done) => {
+  it('Can create and retrieve a region as Region Manager', async (done) => {
     const app = createRegionsEndpoint(testApp, testDataLayer);
     mockAuth0Return.user = "DummyUser";
     const response = await getDummyRegions(app);
@@ -75,6 +75,30 @@ describe("Region Endpoint Tests", () => {
 
     const getResponse = await getDummyRegions(app);
     expect(JSON.parse(getResponse.payload).regions).toEqual([]);
+
+    await app.close();
+    done();
+  });
+
+  it("Can retrieve a single region as either region admin or system admin", async(done) => {
+    const app = createRegionsEndpoint(testApp, testDataLayer);
+    const getRegionAdminResponse = await app.inject({
+      method: 'GET',
+      url: `/regions/${DummyRegion.id}`,
+      headers: {authorization: `Bearer ${dummyToken}`}
+    });
+
+    expect(getRegionAdminResponse.statusCode).toBe(200);
+    expect(JSON.parse(getRegionAdminResponse.payload).region).toStrictEqual(DummyRegion);
+
+    const getSysAdminResponse = await app.inject({
+      method: 'GET',
+      url: `/regions/${DummyRegion.id}`,
+      headers: {authorization: `Bearer ${dummyAdminToken}`}
+    });
+
+    expect(getSysAdminResponse.statusCode).toBe(200);
+    expect(JSON.parse(getSysAdminResponse.payload).region).toStrictEqual(DummyRegion);
 
     await app.close();
     done();

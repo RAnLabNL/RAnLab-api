@@ -7,6 +7,13 @@ interface GetManagedRegionsRequest extends RequestGenericInterface {
   }
 }
 
+interface GetSingleRegionRequest extends RequestGenericInterface {
+  Params: {
+    regionId: string
+  }
+}
+
+
 interface CreateRegionRequest extends RequestGenericInterface {
   Body: Region
 }
@@ -51,6 +58,27 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
       };
       await dataLayer.setRegion(request.body);
       reply.code(201);
+      return JSON.stringify(response);
+    }
+  );
+
+  app.get<GetSingleRegionRequest>('/regions/:regionId',
+    async(request ) => {
+      let {userId, admin}  = <{userId:string, admin: boolean}>await request.jwtVerify();
+      let response = {
+        statusCode: 200,
+        status: "ok",
+        date: Date.now(),
+        region: <Region | null>null
+      }
+      let regions : Region[] ;
+      if(admin) {
+        regions = (await dataLayer.getAllRegions());
+      } else {
+        regions = (await dataLayer.getRegionsManagedBy(userId));
+      }
+      let region: Region | undefined = regions.find((r => r.id == request.params.regionId))
+      response.region = !!region ? region : null;
       return JSON.stringify(response);
     }
   );
