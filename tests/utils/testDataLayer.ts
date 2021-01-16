@@ -14,10 +14,10 @@ export class DummyDatalayer implements DataLayer {
     return {id:"1"};
   }
 
-  async getFilters(_: string): Promise<Filters> {
+  async getFilters(regionId: string): Promise<Filters> {
     return {
-      years: this.businesses.map((b) => b.year_added),
-      industries: this.businesses.map((b) => b.industry)
+      years: this.businesses.filter(b => b.region=== regionId).map((b) => b.year_added),
+      industries: this.businesses.filter(b => b.region=== regionId).map((b) => b.industry)
     };
   }
 
