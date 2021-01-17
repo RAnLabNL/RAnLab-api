@@ -4,8 +4,10 @@ import { addRoutes } from './utils';
 import {createRegionBusinessesEndpoint, createBusinessesEndpoint} from "./endpoints/businesses";
 import createRegionsEndpoint from "./endpoints/regions";
 import {productionDataLayer} from "./database/productionDataLayer";
-import createFiltersEndpoint from "./endpoints/filters";
+import {createFiltersEndpoint} from "./endpoints/filters";
 import {registerAuth0} from "./auth0";
+import {registerCorsHandler} from "./cors";
+
 
 const port = Number(process.env.PORT || 8080);
 const server = addRoutes(
@@ -18,6 +20,7 @@ const server = addRoutes(
 );
 
 registerAuth0(server);
+registerCorsHandler(server);
 
 server.listen(port, '::', (err, address) => {
   if (err) {
