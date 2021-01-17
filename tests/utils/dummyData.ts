@@ -20,11 +20,11 @@ export const DummyBiz: Business = {
   industry: "DummyIndustry"
 };
 
-export async function createDummyBusiness(bizApp: FastifyInstance) {
+export async function createDummyBusiness(bizApp: FastifyInstance, biz: Business = DummyBiz) {
   return await bizApp.inject({
     method: 'POST',
     url: '/businesses',
-    payload: DummyBiz
+    payload: biz
   });
 }
 

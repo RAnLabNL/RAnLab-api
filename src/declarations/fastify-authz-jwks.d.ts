@@ -4,4 +4,4 @@ declare module "fastify-authz-jwks" {
   export default function fastifyJwtSecret(
     options: {}
   ): (request : FastifyRequest, token : FastifyReply, cb: SecretCB) => void;
-};
+}
