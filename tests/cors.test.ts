@@ -25,7 +25,7 @@ describe('CORS Handler Tests', function () {
   }
 
   it("Accepts localhost requests", async (done) => {
-    await testCorsRequest("http://localhost", "http://localhost");
+    await testCorsRequest("http://localhost:3000", "http://localhost:3000");
     done();
   });
   it("Does not accept requests from unapproved origin", async (done) => {
