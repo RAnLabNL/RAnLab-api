@@ -7,11 +7,11 @@ describe('CORS Handler Tests', function () {
   async function testCorsRequest(origin: string, originResponse: string | boolean) {
     let mockReturn = new MockAuth0Return();
     let testApp = testify(mockReturn);
-    mockReturn.user = "Dummy";
+    mockReturn.userId = "Dummy";
     registerCorsHandler(testApp);
     let response = await testApp.inject({
       method: 'OPTIONS',
-      url: `/regions/${DummyRegion.id}/businesses`,
+      url: `/regions/${DummyRegion.name}/businesses`,
       headers: {
         'authorization': 'Bearer abc123',
         'access-control-request-headers': 'x-requested-with',

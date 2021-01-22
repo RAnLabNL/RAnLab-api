@@ -7,7 +7,7 @@ import {productionDataLayer} from "./database/productionDataLayer";
 import {createFiltersEndpoint} from "./endpoints/filters";
 import {registerAuth0} from "./auth0";
 import {registerCorsHandler} from "./cors";
-
+import fastifySensible from "fastify-sensible";
 
 const port = Number(process.env.PORT || 8080);
 const server = addRoutes(
@@ -19,6 +19,7 @@ const server = addRoutes(
   (app: FastifyInstance) => createRegionBusinessesEndpoint(app, productionDataLayer)
 );
 
+server.register(fastifySensible);
 registerAuth0(server);
 registerCorsHandler(server);
 

@@ -13,7 +13,6 @@ interface GetSingleRegionRequest extends RequestGenericInterface {
   }
 }
 
-
 interface CreateRegionRequest extends RequestGenericInterface {
   Body: Region
 }
@@ -54,7 +53,7 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
     async(request, reply) => {
       let response = {
         status: "ok",
-        region: request.body.id
+        region: request.body.name
       };
       await dataLayer.setRegion(request.body);
       reply.code(201);
@@ -77,7 +76,7 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
       } else {
         regions = (await dataLayer.getRegionsManagedBy(userId));
       }
-      let region: Region | undefined = regions.find((r => r.id == request.params.regionId))
+      let region: Region | undefined = regions.find((r => r.name == request.params.regionId))
       response.region = !!region ? region : null;
       return JSON.stringify(response);
     }
@@ -98,7 +97,7 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
   app.delete<DeleteRegionRequest>('/regions/:regionId',
     async (request, reply) => {
       let {userId} = <{userId:string}>await request.jwtVerify();
-      if((await dataLayer.getRegionsManagedBy(userId)).find((r) => r.id === request.params.regionId)) {
+      if((await dataLayer.getRegionsManagedBy(userId)).find((r) => r.name === request.params.regionId)) {
         await dataLayer.deleteRegion(request.params.regionId);
         reply.code(204);
       } else {

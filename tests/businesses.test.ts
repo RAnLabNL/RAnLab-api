@@ -1,28 +1,33 @@
-import {fastify} from "fastify";
 import {DummyDatalayer} from "./utils/testDataLayer";
-import {createBusinessesEndpoint, createRegionBusinessesEndpoint} from "../src/endpoints/businesses";
-import {createDummyBusiness, DummyBiz, DummyRegion} from "./utils/dummyData";
-import {MockAuth0Return, testify} from "./utils/testify";
+import {createBusinessesEndpoint} from "../src/endpoints/businesses";
+import {
+  createDummyBusiness,
+  createDummyRegion,
+  DummyBiz,
+  getDummyBusinesses
+} from "./utils/dummyData";
+import { MockAuth0Return, testify} from "./utils/testify";
+import createRegionsEndpoint from "../src/endpoints/regions";
 
 describe("Business Endpoint Tests", () => {
   let testDataLayer: DummyDatalayer;
 
-  beforeEach(() => {
+  beforeEach(async (done) => {
     testDataLayer = new DummyDatalayer();
+    const server = testify(new MockAuth0Return());
+    const regionsApp = createRegionsEndpoint(server, testDataLayer);
+    await createDummyRegion(regionsApp);
+    done();
   });
   it('Can create and retrieve a valid business', async(done) => {
     const server = testify(new MockAuth0Return());
     const bizApp = createBusinessesEndpoint(server, testDataLayer)
-    const regionBizApp = createRegionBusinessesEndpoint(server, testDataLayer);
     const createResponse = await createDummyBusiness(bizApp);
     expect(createResponse.statusCode).toBe(200);
 
-    const getResponse = await regionBizApp.inject({
-      method: 'GET',
-      url: `/regions/${DummyRegion.id}/businesses`
-    });
-
+    const getResponse = await getDummyBusinesses(bizApp);
     expect(getResponse.statusCode).toBe(200);
+
     let {businesses, filters} = JSON.parse(getResponse.payload);
     expect(businesses).toEqual(expect.arrayContaining([expect.objectContaining({name: DummyBiz.name})]));
     expect(filters).toEqual(expect.objectContaining({years: [DummyBiz.year_added], industries: [DummyBiz.industry]}))
@@ -30,31 +35,11 @@ describe("Business Endpoint Tests", () => {
     done();
   });
 
-  it('Can paginate businesses', async(done) => {
-    const server = testify(new MockAuth0Return());
-    const bizApp = createBusinessesEndpoint(server, testDataLayer);
-    const regionBizApp = createRegionBusinessesEndpoint(server, testDataLayer);
-    for(let i = 0; i < 20; i++) {
-      await createDummyBusiness(bizApp);
-    }
-    const pagedResponse = await regionBizApp.inject({
-      method: "GET",
-      url: `/regions/${DummyRegion.id}/businesses`
-    });
-    expect(pagedResponse.statusCode).toBe(200);
-    const pagedPayload = JSON.parse(pagedResponse.payload);
-    expect(pagedPayload).toStrictEqual(expect.objectContaining({
-      businesses: expect.arrayContaining([expect.anything()]),
-      pageStart: expect.stringMatching("[a-z0-9]*"),
-      pageEnd: expect.stringMatching("[a-z0-9]*")
-    }));
-    expect(pagedPayload.businesses).toHaveLength(10);
-    done();
-  });
-
   it('Can update and retrieve a business', async(done) => {
-    const bizApp = createBusinessesEndpoint(fastify(), testDataLayer);
-    const bizId = JSON.parse((await createDummyBusiness(bizApp)).payload).businessId;
+    const bizApp = createBusinessesEndpoint(testify(new MockAuth0Return()), testDataLayer);
+
+    const createResponse = await createDummyBusiness(bizApp);
+    const bizId = JSON.parse(createResponse.payload).businessId;
     const updatedBiz = {...DummyBiz, id: bizId, year_added: 2020, employees: 2};
     const updateResponse = await bizApp.inject({
       method: 'POST',

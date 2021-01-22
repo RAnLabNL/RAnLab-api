@@ -1,7 +1,17 @@
 import {DataLayer, Filters, IdObject, Region} from "../../src/database/productionDataLayer";
 import {Business} from "../../src/endpoints/businesses";
+import { AddRequest, UpdateRequest, DeleteRequest } from "../../src/endpoints/editRequests";
 
 export class DummyDatalayer implements DataLayer {
+  createAddRequest(_: AddRequest): Promise<AddRequest> {
+      throw new Error("Method not implemented.");
+  }
+  createUpdateRequest(_: UpdateRequest): Promise<UpdateRequest> {
+      throw new Error("Method not implemented.");
+  }
+  createDeleteRequests(_: DeleteRequest): Promise<DeleteRequest> {
+      throw new Error("Method not implemented.");
+  }
   businesses: Business[] = [];
   regions: Region[] = [];
 
@@ -16,14 +26,14 @@ export class DummyDatalayer implements DataLayer {
 
   async getFilters(regionId: string): Promise<Filters> {
     return {
-      years: this.businesses.filter(b => b.region=== regionId).map((b) => b.year_added),
-      industries: this.businesses.filter(b => b.region=== regionId).map((b) => b.industry)
+      years: this.businesses.filter(b => b.regionId=== regionId).map((b) => b.year_added),
+      industries: this.businesses.filter(b => b.regionId=== regionId).map((b) => b.industry)
     };
   }
 
   async setRegion(region: Region): Promise<IdObject> {
     this.regions.push(region);
-    return {id: region.id};
+    return {id: region.name};
   }
 
   async getAllRegions() : Promise<Region[]> {
@@ -35,7 +45,7 @@ export class DummyDatalayer implements DataLayer {
   }
 
   async deleteRegion(regionId: string): Promise<void> {
-    this.regions = this.regions.filter((r) => r.id !== regionId);
+    this.regions = this.regions.filter((r) => r.name !== regionId);
   }
 
   clearRegions() {

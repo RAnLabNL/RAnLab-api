@@ -8,7 +8,7 @@ interface GetFiltersRequest extends RequestGenericInterface {
 }
 
 export function createFiltersEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
-  app.get<GetFiltersRequest>('/filters/:regionId',
+  app.get<GetFiltersRequest>('/regions/:regionId/filters',
     async (request) => {
       let response = {
         status: "ok",

@@ -1,14 +1,15 @@
 import fastify from "fastify";
 import fastifyJWT, {FastifyJWTOptions} from "fastify-jwt";
 import jwt from "jsonwebtoken";
+import fastifySensible from "fastify-sensible";
 
 export const mockSecret = 'dummy';
 export class MockAuth0Return {
-  user: string|null = null;
+  userId: string|null = null;
   callCount: number = 0;
   reset() {
     this.callCount = 0;
-    this.user = null
+    this.userId = null
   }
 }
 
@@ -22,8 +23,9 @@ export const testify = (mockAuth0Return : MockAuth0Return) => {
     secret: (_request, _reply, _provider) => { mockAuth0Return.callCount++; _provider(null, mockSecret);},
     audience: 'https://localhost',
     issuer: 'https://localhost/',
-    algorithms: ['RS256'],
+    algorithms: ['none'],
     decode: { complete: true },
   });
+  f.register(fastifySensible);
   return f;
 };

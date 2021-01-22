@@ -8,26 +8,48 @@ export const dummyToken = getMockToken({userId: dummyManager})
 export const dummyAdminToken = getMockToken({userId: "", admin: true});
 
 export const DummyRegion: Region = {
-  id: "DummyRegion",
+  name: "DummyRegion",
   manager: dummyManager
 };
 
 export const DummyBiz: Business = {
   name: "DummyBiz",
-  region: DummyRegion.id,
+  regionId: DummyRegion.name,
   year_added: 2009,
   employees: 1,
   industry: "DummyIndustry"
 };
 
-export async function createDummyBusiness(bizApp: FastifyInstance, biz: Business = DummyBiz) {
+export async function createDummyRegion(regionsApp: FastifyInstance) {
+  await regionsApp.inject({
+    method: "POST",
+    url: "/regions",
+    payload: DummyRegion,
+    headers: {authorization: `Bearer ${dummyToken}`}
+  });
+}
+
+export async function createDummyBusiness(bizApp: FastifyInstance, biz : Business = DummyBiz, token: string = dummyToken) {
   return await bizApp.inject({
     method: 'POST',
-    url: '/businesses',
-    payload: biz
+    url: `/regions/${biz.regionId}/businesses`,
+    payload: biz,
+    headers: {authorization: `Bearer ${token}`}
+  });
+}
+
+export async function getDummyBusinesses(bizApp: FastifyInstance, token: string = dummyToken) {
+  return await bizApp.inject({
+    method: 'GET',
+    url: `/regions/${DummyBiz.regionId}/businesses`,
+    headers: {authorization: `Bearer ${token}`}
   });
 }
 
 export async function getDummyRegions(app: FastifyInstance, token: string = dummyToken) {
-  return await app.inject({method: 'GET', headers: {authorization: `Bearer ${token}`}, url: `/regions`});
+  return await app.inject({
+    method: 'GET',
+    headers: {authorization: `Bearer ${token}`},
+    url: `/regions`
+  });
 }

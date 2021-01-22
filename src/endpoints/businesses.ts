@@ -5,7 +5,7 @@ import GeoPoint = firebase.firestore.GeoPoint;
 
 interface GetRegionBusinessRequest extends RequestGenericInterface {
   Params: {
-    region: string
+    regionId: string
   },
   Headers: {
     access_token: string
@@ -13,7 +13,10 @@ interface GetRegionBusinessRequest extends RequestGenericInterface {
 }
 
 interface CreateBusinessRequest extends RequestGenericInterface {
-  Body: Business
+  Params: {
+    regionId: string
+  },
+  Body: Business,
 }
 
 interface UpdateBusinessRequest extends RequestGenericInterface {
@@ -27,44 +30,64 @@ export interface Business {
   id?: string | undefined;
   name: string;
   employees: number;
-  region: string;
+  regionId: string;
   industry: string;
   year_added: number;
   location?: GeoPoint | null | undefined
 }
 
-export function createRegionBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
-  app.get<GetRegionBusinessRequest>('/regions/:region/businesses',
-    async (request) => {
-      let response = {
-        status: "ok",
-        date: Date.now(),
-        region: request.params.region,
-        businesses: <Business[]>[],
-        pageStart: "1",
-        pageEnd: "2",
-        filters: <Filters>{}
-      };
-
-      response.businesses = (await dataLayer.getBusinessesByRegion(request.params.region)).slice(0, 10);
-      response.filters = await dataLayer.getFilters(request.params.region);
-      return JSON.stringify(response);
-    }
-  );
-  return app;
+interface AuthToken {
+  userId: string,
+  admin: boolean
+}
+async function isRegionManager(userId: string, regionId: string, dataLayer: DataLayer) {
+  const regions = (await dataLayer.getRegionsManagedBy(userId));
+  return  regions.find((r) => r.name === regionId);
 }
 
 export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
-  app.post<CreateBusinessRequest>(
-    '/businesses',
+  app.get<GetRegionBusinessRequest>('/regions/:regionId/businesses',
     async (request) => {
-      let businessRef = await dataLayer.setBusiness(request.body);
-      let response = {
-        status: "ok",
-        date: Date.now(),
-        businessId: businessRef.id
-      };
-      return JSON.stringify(response);
+
+      let {userId, admin} = <AuthToken>await request.jwtVerify();
+      if(!(admin || await isRegionManager(userId, request.params.regionId,  dataLayer))) {
+        throw app.httpErrors.unauthorized("User does not have access to region");
+      } else {
+        let response = {
+          status: "ok",
+          date: Date.now(),
+          region: request.params.regionId,
+          businesses: <Business[]>[],
+          pageStart: "1",
+          pageEnd: "2",
+          filters: <Filters>{}
+        };
+
+        response.businesses = (await dataLayer.getBusinessesByRegion(request.params.regionId)).slice(0, 10);
+        response.filters = await dataLayer.getFilters(request.params.regionId);
+        return JSON.stringify(response);
+      }
+    }
+  );
+
+  app.post<CreateBusinessRequest>(
+    '/regions/:regionId/businesses',
+    async (request) => {
+
+      let {userId, admin} = <AuthToken>await request.jwtVerify();
+      if(!(admin || await isRegionManager(userId, request.params.regionId, dataLayer))) {
+        throw app.httpErrors.unauthorized("User does not have access to region");
+      } else  if (!!request.body.regionId && request.body.regionId !== request.params.regionId) {
+        throw app.httpErrors.badRequest("Region ID mismatch between route and body ");
+      } else {
+        let businessRef = await dataLayer.setBusiness(request.body);
+        let response = {
+          status: "ok",
+          date: Date.now(),
+          businessId: businessRef.id
+        };
+        return JSON.stringify(response);
+      }
     }
   );
 
