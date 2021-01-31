@@ -1,5 +1,6 @@
 import type {FastifyInstance, RequestGenericInterface} from 'fastify';
 import {DataLayer, Filters} from "../database/productionDataLayer";
+import {getFilterSchema} from "./docs/filterSchemas";
 
 interface GetFiltersRequest extends RequestGenericInterface {
   Params: {
@@ -8,7 +9,7 @@ interface GetFiltersRequest extends RequestGenericInterface {
 }
 
 export function createFiltersEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
-  app.get<GetFiltersRequest>('/regions/:regionId/filters',
+  app.get<GetFiltersRequest>('/regions/:regionId/filters', {schema: getFilterSchema},
     async (request) => {
       let response = {
         status: "ok",

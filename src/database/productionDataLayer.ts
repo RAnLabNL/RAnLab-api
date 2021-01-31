@@ -11,8 +11,15 @@ export interface Region {
   id?: string | undefined,
   name: string,
   manager: string,
-  years?: {year: number, count: number}[] | undefined,
-  industries?: {industry: string, count: number}[] | undefined,
+  filters?: {
+    years?: { year: number, count: number }[] | undefined,
+    industries?: { industry: string, count: number }[] | undefined,
+  }
+}
+
+export interface Filters {
+  years?: number[] | undefined,
+  industries?: string[]
 }
 
 export interface DataLayer {
@@ -28,10 +35,6 @@ export interface DataLayer {
   createDeleteRequests(deleteRequest: DeleteRequest): Promise<DeleteRequest>;
 }
 
-export interface Filters {
-  years?: number[] | undefined,
-  industries?: string[]
-}
 
 export class ProductionDataLayer implements DataLayer {
   async createAddRequest(addRequest: AddRequest): Promise<AddRequest> {
@@ -97,9 +100,9 @@ export class ProductionDataLayer implements DataLayer {
           }
         }
       }
-      let update = {years: years, industries: industries};
+      let regionUpdate = {filters: {years: years, industries: industries}};
 
-      await transaction.update(regionRef, update)
+      await transaction.update(regionRef, regionUpdate)
       await transaction.set(businessRef, newBusinessData);
     }).then(() => <IdObject>{id: businessRef.id});
   }
@@ -145,9 +148,9 @@ export class ProductionDataLayer implements DataLayer {
             let regionDoc = await transaction.get(regionRef);
             let {years, industries} = this.calculateNewFilters(regionDoc, businessData, -1);
 
-            let update = {years: years, industries: industries};
+            let regionUpdate = {filters: {years: years, industries: industries}};
 
-            await transaction.update(regionRef, update)
+            await transaction.update(regionRef, regionUpdate)
           }
           await transaction.delete(businessRef);
         }

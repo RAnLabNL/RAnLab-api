@@ -2,6 +2,7 @@ import type {FastifyInstance, RequestGenericInterface} from 'fastify';
 import {DataLayer, Filters} from "../database/productionDataLayer";
 import firebase from "firebase";
 import GeoPoint = firebase.firestore.GeoPoint;
+import {createBizSchema, getBizSchema, updateBizSchema} from "./docs/businessesSchemas";
 
 interface GetRegionBusinessRequest extends RequestGenericInterface {
   Params: {
@@ -46,7 +47,10 @@ async function isRegionManager(userId: string, regionId: string, dataLayer: Data
 }
 
 export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
-  app.get<GetRegionBusinessRequest>('/regions/:regionId/businesses',
+
+  app.get<GetRegionBusinessRequest>(
+    '/regions/:regionId/businesses',
+    {schema: getBizSchema},
     async (request) => {
 
       let {userId, admin} = <AuthToken>await request.jwtVerify();
@@ -58,8 +62,6 @@ export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLa
           date: Date.now(),
           region: request.params.regionId,
           businesses: <Business[]>[],
-          pageStart: "1",
-          pageEnd: "2",
           filters: <Filters>{}
         };
 
@@ -70,10 +72,11 @@ export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLa
     }
   );
 
+
   app.post<CreateBusinessRequest>(
     '/regions/:regionId/businesses',
+    {schema: createBizSchema},
     async (request) => {
-
       let {userId, admin} = <AuthToken>await request.jwtVerify();
       if(!(admin || await isRegionManager(userId, request.params.regionId, dataLayer))) {
         throw app.httpErrors.unauthorized("User does not have access to region");
@@ -93,6 +96,7 @@ export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLa
 
   app.post<UpdateBusinessRequest>(
     '/businesses/:businessId',
+    {schema: updateBizSchema},
     async (request) => {
       let updatedBiz = {...request.body, id: request.params.businessId};
       await dataLayer.setBusiness(updatedBiz);

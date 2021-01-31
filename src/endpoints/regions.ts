@@ -1,5 +1,12 @@
 import type {FastifyInstance, RequestGenericInterface} from 'fastify';
 import {DataLayer, Region} from "../database/productionDataLayer";
+import {
+  getManagedRegionsReqSchema,
+  getSingleRegionReqSchema,
+  createRegionReqSchema,
+  updateRegionReqSchema,
+  deleteRegionReqSchema
+} from "./docs/regionSchemas";
 
 interface GetManagedRegionsRequest extends RequestGenericInterface {
   Params: {
@@ -31,41 +38,29 @@ interface UpdateRegionRequest extends RequestGenericInterface {
 }
 
 export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : DataLayer) {
-  app.get<GetManagedRegionsRequest>('/regions',
+  app.get<GetManagedRegionsRequest>(
+    '/regions/manager/:managerId',
+    {schema: getManagedRegionsReqSchema},
     async (request) => {
-      let {userId, admin}  = <{userId:string, admin: boolean}>await request.jwtVerify();
+        let {userId, admin}  = <{userId:string, admin: boolean}>await request.jwtVerify();
       let response = {
-        statusCode: 200,
         status: "ok",
         date: Date.now(),
         regions: <Region[]>[]
-      }
-      if(admin) {
-        response.regions.push(...(await dataLayer.getAllRegions()));
-      } else {
+      };
+      if(admin || userId == request.params.managerId) {
         response.regions.push(...(await dataLayer.getRegionsManagedBy(userId)));
       }
       return JSON.stringify(response);
     }
   );
 
-  app.post<CreateRegionRequest>('/regions',
-    async(request, reply) => {
-      let response = {
-        status: "ok",
-        region: request.body.name
-      };
-      await dataLayer.setRegion(request.body);
-      reply.code(201);
-      return JSON.stringify(response);
-    }
-  );
-
-  app.get<GetSingleRegionRequest>('/regions/:regionId',
+  app.get<GetSingleRegionRequest>(
+    '/regions/:regionId',
+    {schema: getSingleRegionReqSchema},
     async(request ) => {
       let {userId, admin}  = <{userId:string, admin: boolean}>await request.jwtVerify();
       let response = {
-        statusCode: 200,
         status: "ok",
         date: Date.now(),
         region: <Region | null>null
@@ -82,7 +77,23 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
     }
   );
 
-  app.post<UpdateRegionRequest>('/regions/:regionId',
+  app.post<CreateRegionRequest>(
+    '/regions',
+    {schema: createRegionReqSchema},
+    async(request, reply) => {
+      let response = {
+        status: "ok",
+        regionId: ""
+      };
+      response.regionId = (await dataLayer.setRegion(request.body)).id;
+      reply.code(201);
+      return JSON.stringify(response);
+    }
+  );
+
+  app.post<UpdateRegionRequest>(
+    '/regions/:regionId',
+    {schema: updateRegionReqSchema},
     async(request) => {
       let UpdatedRegion: Region = <Region>{...request.body};
       let response = {
@@ -94,7 +105,9 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
     }
   );
 
-  app.delete<DeleteRegionRequest>('/regions/:regionId',
+  app.delete<DeleteRegionRequest>(
+    '/regions/:regionId',
+    {schema: deleteRegionReqSchema},
     async (request, reply) => {
       let {userId} = <{userId:string}>await request.jwtVerify();
       if((await dataLayer.getRegionsManagedBy(userId)).find((r) => r.name === request.params.regionId)) {

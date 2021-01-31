@@ -50,6 +50,6 @@ export async function getDummyRegions(app: FastifyInstance, token: string = dumm
   return await app.inject({
     method: 'GET',
     headers: {authorization: `Bearer ${token}`},
-    url: `/regions`
+    url: `/regions/manager/${DummyRegion.manager}`
   });
 }
