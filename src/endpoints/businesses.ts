@@ -3,6 +3,8 @@ import {DataLayer, Filters} from "../database/productionDataLayer";
 import firebase from "firebase";
 import GeoPoint = firebase.firestore.GeoPoint;
 import {createBizSchema, getBizSchema, updateBizSchema} from "./docs/businessesSchemas";
+import {isRegionManager} from "../utils";
+import {verifyJwt} from "../auth0";
 
 interface GetRegionBusinessRequest extends RequestGenericInterface {
   Params: {
@@ -41,21 +43,18 @@ interface AuthToken {
   userId: string,
   admin: boolean
 }
-async function isRegionManager(userId: string, regionId: string, dataLayer: DataLayer) {
-  const regions = (await dataLayer.getRegionsManagedBy(userId));
-  return  regions.find((r) => r.name === regionId);
-}
 
 export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
 
   app.get<GetRegionBusinessRequest>(
     '/regions/:regionId/businesses',
     {schema: getBizSchema},
-    async (request) => {
+    async (request, reply) => {
 
-      let {userId, admin} = <AuthToken>await request.jwtVerify();
+      let {userId, admin} = await verifyJwt(request)
       if(!(admin || await isRegionManager(userId, request.params.regionId,  dataLayer))) {
-        throw app.httpErrors.unauthorized("User does not have access to region");
+        reply.unauthorized("User does not have access to region");
+        return;
       } else {
         let response = {
           status: "ok",
@@ -97,15 +96,21 @@ export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLa
   app.post<UpdateBusinessRequest>(
     '/businesses/:businessId',
     {schema: updateBizSchema},
-    async (request) => {
-      let updatedBiz = {...request.body, id: request.params.businessId};
-      await dataLayer.setBusiness(updatedBiz);
-      let response = {
-        status: "ok",
-        date: Date.now(),
-        business: updatedBiz
-      };
-      return JSON.stringify(response);
+    async (request,reply) => {
+      let {admin} = await verifyJwt(request);
+      if(!admin) {
+        reply.unauthorized("Only admin users can directly update business information");
+        return;
+      } else {
+        let updatedBiz = {...request.body, id: request.params.businessId};
+        await dataLayer.setBusiness(updatedBiz);
+        let response = {
+          status: "ok",
+          date: Date.now(),
+          business: updatedBiz
+        };
+        return JSON.stringify(response);
+      }
     }
   );
 
