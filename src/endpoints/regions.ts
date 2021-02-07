@@ -55,7 +55,7 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
           regions: <Region[]>[]
         };
         if (admin || userId == request.params.managerId) {
-          response.regions.push(...(await dataLayer.getRegionsManagedBy(userId)));
+          response.regions.push(...(await dataLayer.getRegionsManagedBy(request.params.managerId)));
         }
         return JSON.stringify(response);
       }
@@ -129,8 +129,8 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
     '/regions/:regionId',
     {schema: deleteRegionReqSchema},
     async (request, reply) => {
-      let {userId} = <{userId:string}>await request.jwtVerify();
-      if((await dataLayer.getRegionsManagedBy(userId)).find((r) => r.name === request.params.regionId)) {
+      let {userId, admin} = <{userId:string, admin: boolean}>await request.jwtVerify();
+      if(admin || isRegionManager(userId, request.params.regionId, dataLayer)) {
         await dataLayer.deleteRegion(request.params.regionId);
         reply.code(204);
       } else {

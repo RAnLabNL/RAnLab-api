@@ -3,14 +3,18 @@ import {createBusinessesEndpoint} from "../src/endpoints/businesses";
 import {
   createDummyBusiness,
   createDummyRegion,
-  DummyBiz,
+  DummyBiz, DummyRegion,
   getDummyBusinesses
 } from "./utils/dummyData";
-import { MockAuth0Return, testify} from "./utils/testify";
+import {getMockToken, MockAuth0Return, setupAuth0TestEnv, testify} from "./utils/testify";
 import createRegionsEndpoint from "../src/endpoints/regions";
 
 describe("Business Endpoint Tests", () => {
   let testDataLayer: DummyDatalayer;
+
+  beforeAll(() => {
+    setupAuth0TestEnv();
+  });
 
   beforeEach(async (done) => {
     testDataLayer = new DummyDatalayer();
@@ -44,7 +48,8 @@ describe("Business Endpoint Tests", () => {
     const updateResponse = await bizApp.inject({
       method: 'POST',
       url: `/businesses/${bizId}`,
-      payload: updatedBiz
+      payload: updatedBiz,
+      headers:{authorization: `Bearer ${getMockToken({userId: DummyRegion.manager, admin: false})}`}
     });
     expect(updateResponse.statusCode).toBe(200);
     expect(JSON.parse(updateResponse.payload).business).toEqual(updatedBiz);

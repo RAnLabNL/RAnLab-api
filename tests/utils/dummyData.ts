@@ -4,8 +4,8 @@ import {Region} from "../../src/database/productionDataLayer";
 import {getMockToken} from "./testify";
 
 const dummyManager = "DummyManagerId";
-export const dummyToken = getMockToken({userId: dummyManager})
-export const dummyAdminToken = getMockToken({userId: "", admin: true});
+export const dummyToken = getMockToken({userId: dummyManager, admin: false})
+export const dummyAdminToken = getMockToken({userId: "admin", admin: true});
 
 export const DummyRegion: Region = {
   name: "DummyRegion",
@@ -21,7 +21,7 @@ export const DummyBiz: Business = {
 };
 
 export async function createDummyRegion(regionsApp: FastifyInstance) {
-  await regionsApp.inject({
+  return await regionsApp.inject({
     method: "POST",
     url: "/regions",
     payload: DummyRegion,
@@ -46,7 +46,7 @@ export async function getDummyBusinesses(bizApp: FastifyInstance, token: string 
   });
 }
 
-export async function getDummyRegions(app: FastifyInstance, token: string = dummyToken) {
+export async function getRegionsByDummyManager(app: FastifyInstance, token: string = dummyToken) {
   return await app.inject({
     method: 'GET',
     headers: {authorization: `Bearer ${token}`},

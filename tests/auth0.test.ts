@@ -6,68 +6,93 @@ import {DummyDatalayer} from "./utils/testDataLayer";
 import fetch from "node-fetch";
 import {createBusinessesEndpoint} from "../src/endpoints/businesses";
 import fastifySensible from "fastify-sensible";
+import {setupAuth0TestEnv} from "./utils/testify";
 
-process.env.AUTH0_CLAIMS_NAMESPACE="https://mun.ca";
-process.env.TEST_AUTH0_DOMAIN= "dev-5ju75h98.us.auth0.com";
-process.env.TEST_AUTH0_CLIENT_ID = "iqwBRZwwuKGz0BkHiInTWTyqvOFLepd6";
-process.env.TEST_AUTH0_USERNAME = "liquiddark@gmail.com";
-//process.env.TEST_AUTH0_PASSWORD should be set at runtime
-
-describe("Auth0 integration works correctly", () => {
+describe("Auth0 integration tests", () => {
   let sut : FastifyInstance;
+  let access_token : string;
+
+  beforeAll(async (done) => {
+    setupAuth0TestEnv()
+    await authenticateToTestDomain();
+    done();
+  });
+
   beforeEach(() => {
     sut = fastify();
     registerAuth0(sut, process.env.TEST_AUTH0_DOMAIN);
+
+    // fastifySensible gives us the decorator function needed when rejecting unauthorized reqs
     sut.register(fastifySensible);
-    addRoutes(sut,
-      () => createRegionsEndpoint(sut, new DummyDatalayer()),
-      () => createBusinessesEndpoint(sut, new DummyDatalayer())
-    );
   });
+
   afterEach(async (done) => {
     await sut.close();
     done();
   });
-  it("Disallows an authenticated request", async(done) => {
-    let response = await sut.inject({
-      method: "GET",
-      url: "/regions/DummyRegion",
+
+  describe("Region Tests", () => {
+    beforeEach(() => {
+      addRoutes(sut,
+        () => createRegionsEndpoint(sut, new DummyDatalayer()),
+      );
     });
-    expect(response.statusCode).toBe(401);
-    done();
+
+    it("Disallows an unauthenticated request", async(done) => {
+      let response = await sut.inject({
+        method: "GET",
+        url: "/regions/DummyRegion",
+      });
+      expect(response.statusCode).toBe(401);
+      done();
+    });
+
+    it("Allows an authenticated request for regions by manager", async(done) => {
+      let response = await sut.inject({
+        method: "GET",
+        url: "/regions/manager/DummyManager",
+        headers: {authorization: `Bearer ${access_token}` }
+      });
+      expect(response.statusCode).toBe(200);
+      done();
+    });
+
+    it("Allows an authenticated request for a region by ID", async(done) => {
+      let response = await sut.inject({
+        method: "GET",
+        url: "/regions/DummyRegion",
+        headers: {authorization: `Bearer ${access_token}` }
+      });
+      expect(response.statusCode).toBe(200);
+      done();
+    });
   });
 
-  it("Allows an authenticated request for regions", async(done) => {
-    let access_token = await authenticateToTestDomain();
-    let response = await sut.inject({
-      method: "GET",
-      url: "/regions/manager/DummyManager",
-      headers: {authorization: `Bearer ${access_token}` }
+  describe("Business Tests", () => {
+    beforeEach(() => {
+      addRoutes(sut,
+        () => createBusinessesEndpoint(sut, new DummyDatalayer()),
+      );
     });
-    expect(response.statusCode).toBe(200);
-    done();
-  });
 
-  it("Allows an authenticated request for businesses", async(done) => {
-    let access_token = await authenticateToTestDomain();
-    let response = await sut.inject({
-      method: "GET",
-      url: "/regions/DummyRegion/businesses",
-      headers: {authorization: `Bearer ${access_token}` }
+    it("Disallows an unauthenticated request", async(done) => {
+      let response = await sut.inject({
+        method: "GET",
+        url: "/regions/DummyRegion/businesses",
+      });
+      expect(response.statusCode).toBe(401);
+      done();
     });
-    expect(response.statusCode).toBe(200);
-    done();
-  });
 
-  it("Allows an authenticated request", async(done) => {
-    let access_token = await authenticateToTestDomain();
-    let response = await sut.inject({
-      method: "GET",
-      url: "/regions/DummyRegion",
-      headers: {authorization: `Bearer ${access_token}` }
+    it("Allows an authenticated request for businesses", async (done) => {
+      let response = await sut.inject({
+        method: "GET",
+        url: "/regions/DummyRegion/businesses",
+        headers: {authorization: `Bearer ${access_token}`}
+      });
+      expect(response.statusCode).toBe(200);
+        done();
     });
-    expect(response.statusCode).toBe(200);
-    done();
   });
 
   async function authenticateToTestDomain() {
@@ -84,8 +109,6 @@ describe("Auth0 integration works correctly", () => {
         grant_type: "password"
       })
     });
-    let response = await authResponse.json();
-    let access_token = response.access_token;
-    return access_token;
+    access_token = (await authResponse.json()).access_token;
   }
 });

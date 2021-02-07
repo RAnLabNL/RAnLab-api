@@ -1,20 +1,22 @@
 import {Business} from "../endpoints/businesses";
 import {firestore} from "./firestore";
-import firebase from "firebase";
 import {AddRequest, DeleteRequest, UpdateRequest} from "../endpoints/editRequests";
+import firebase from "firebase";
 
 export interface IdObject {
   id: string
+}
+
+interface RegionFilters {
+  years?: {year: number, count: number}[] | undefined,
+  industries?: {industry: string, count: number}[] | undefined
 }
 
 export interface Region {
   id?: string | undefined,
   name: string,
   manager: string,
-  filters?: {
-    years?: { year: number, count: number }[] | undefined,
-    industries?: { industry: string, count: number }[] | undefined,
-  }
+  filters?: RegionFilters
 }
 
 export interface Filters {
@@ -34,7 +36,6 @@ export interface DataLayer {
   createUpdateRequest(updateRequest: UpdateRequest): Promise<UpdateRequest>;
   createDeleteRequests(deleteRequest: DeleteRequest): Promise<DeleteRequest>;
 }
-
 
 export class ProductionDataLayer implements DataLayer {
   async createAddRequest(addRequest: AddRequest): Promise<AddRequest> {
@@ -72,37 +73,28 @@ export class ProductionDataLayer implements DataLayer {
       if(!regionDoc.exists) {
         throw "Bad Region";
       }
-      let {years, industries} = this.calculateNewFilters(regionDoc, newBusinessData, 1);
-
+      let filters = ProductionDataLayer.getCurrentFilters(regionDoc);
       let businessDoc = await transaction.get(businessRef);
+      let updates : RegionFilters = {
+        years: [{year: newBusinessData.year_added, count: 1}],
+        industries: [{industry: newBusinessData.industry, count: 1}]
+      };
+
       if(businessDoc.exists) {
         let existingBusinessData = businessDoc.data();
-        if(!!existingBusinessData && !!existingBusinessData.year_added) {
-          // @ts-ignore I don't know why, but it thinks existingBusinessData could be null here, despite the enclosing if statement
-          let oldYearIndex = years.findIndex((y) => y.year === existingBusinessData.year_added);
-          if(oldYearIndex >= 0) {
-            if (years[oldYearIndex].count > 1) {
-              years[oldYearIndex].count -= 1;
-            } else {
-              years.splice(oldYearIndex, 1);
-            }
-          }
-        }
-        if (!!existingBusinessData && !!existingBusinessData.industry) {
-          // @ts-ignore I don't know why, but it thinks existingBusinessData could be null here, despite the enclosing if statement
-          let existingIndustryIndex = industries.findIndex(i => i.industry === existingBusinessData.industry);
-          if(existingIndustryIndex >= 0) {
-            if (industries[existingIndustryIndex].count > 1) {
-              industries[existingIndustryIndex].count -= 1;
-            } else {
-              industries.splice(existingIndustryIndex, 1);
-            }
-          }
+        if(!!existingBusinessData) {
+          // @ts-ignore no idea why it thinks updates can be undefined here.
+          updates.years.push(
+            {year: existingBusinessData.year_added, count: -1},
+          );
+          // @ts-ignore no idea why it thinks updates can be undefined here.
+          updates.industries.push(
+            {industry: existingBusinessData.industry, count: -1},
+          );
         }
       }
-      let regionUpdate = {filters: {years: years, industries: industries}};
 
-      await transaction.update(regionRef, regionUpdate)
+      await transaction.update(regionRef, {filters: this.calculateNewFilters(filters, updates)})
       await transaction.set(businessRef, newBusinessData);
     }).then(() => <IdObject>{id: businessRef.id});
   }
@@ -110,10 +102,7 @@ export class ProductionDataLayer implements DataLayer {
   async getFilters(region: string) : Promise<Filters>{
     let regionData = (await firestore.collection("regions").doc(region).get()).data();
     regionData = !!regionData ? regionData : {};
-    return {
-      years: regionData.years ? regionData.years : [],
-      industries: regionData.industries ? regionData.industries : []
-    };
+    return regionData.filters;
   }
 
   async getAllRegions() : Promise<Region[]> {
@@ -144,13 +133,12 @@ export class ProductionDataLayer implements DataLayer {
         let businessData = businessDoc.data();
         if (!!businessData) {
           if (!!businessData.regionId) {
-            let regionRef = firestore.collection("regions").doc(businessData.regionId);
-            let regionDoc = await transaction.get(regionRef);
-            let {years, industries} = this.calculateNewFilters(regionDoc, businessData, -1);
+            let deleteBizFromFilter = {
+              years: [{year: businessData.year_added, count: -1}],
+              industries: [{industry: businessData.industry, count: -1}]
+            }
 
-            let regionUpdate = {filters: {years: years, industries: industries}};
-
-            await transaction.update(regionRef, regionUpdate)
+            await this.updateRegionFilters(businessData.regionId, deleteBizFromFilter, transaction);
           }
           await transaction.delete(businessRef);
         }
@@ -158,28 +146,64 @@ export class ProductionDataLayer implements DataLayer {
     );
   }
 
-  private calculateNewFilters(regionDoc: firebase.firestore.DocumentSnapshot<firebase.firestore.DocumentData>, businessData: firebase.firestore.DocumentData , change: number) {
-    let regionData = regionDoc.data();
-    let years: { year: number, count: number }[] = !!regionData && !!regionData.years ? regionData.years : [];
-    let yearEntryIndex = years.findIndex(y => y.year === businessData.year_added);
-    if (yearEntryIndex < 0 && change > 0)  {
-      years.push({year: businessData.year_added, count: change});
-    } else if (years[yearEntryIndex].count + change > 0) {
-      years[yearEntryIndex].count += change;
-    } else {
-      years.splice(yearEntryIndex, 1);
+  private async updateRegionFilters(regionId: string, filterUpdate: RegionFilters, transaction: firebase.firestore.Transaction) {
+    let regionRef = firestore.collection("regions").doc(regionId);
+    let regionDoc = await transaction.get(regionRef);
+    if (!!regionDoc) {
+      let regionData = regionDoc.data();
+      if (!!regionData) {
+        let updatedFilters = this.calculateNewFilters(regionData.filters, filterUpdate);
+        let regionUpdate = {filters: updatedFilters};
+
+        await transaction.update(regionRef, regionUpdate)
+      }
+    }
+  }
+
+  private calculateNewFilters(filters: RegionFilters, updates: RegionFilters) {
+    let years : {year: number, count: number}[] = !!filters.years ? filters.years : [];
+    let industries : {industry: string, count: number}[] = !!filters.industries ? filters.industries : [];
+    if(!!updates.years && updates.years.length > 0) {
+      for(let yearUpdate of updates.years) {
+        let yearEntryIndex = years.findIndex(y => y.year === yearUpdate.year);
+        if (yearEntryIndex < 0) {
+          years.push({year: yearUpdate.year, count: yearUpdate.count});
+        } else {
+          years[yearEntryIndex].count += yearUpdate.count;
+        }
+      }
+      for(let i = years.length-1; i >=0; i--) {
+        if(years[i].count <= 0) {
+          years.splice(i,1);
+        }
+      }
     }
 
-    let industries: { industry: string, count: number }[] = !!regionData && !!regionData.industries ? regionData.industries : [];
-    let industryEntryIndex = industries.findIndex(i => i.industry === businessData.industry);
-    if (industryEntryIndex < 0 && change > 0) {
-      industries.push({industry: businessData.industry, count: change});
-    } else if (industries[industryEntryIndex].count + change > 0) {
-      industries[industryEntryIndex].count += change;
-    } else {
-      industries.splice(industryEntryIndex, 1);
+    if(!!updates.industries && updates.industries.length > 0) {
+      for(let industryUpdate of updates.industries) {
+        let industryEntryIndex = industries.findIndex(i => i.industry === industryUpdate.industry);
+        if (industryEntryIndex < 0) {
+          industries.push(industryUpdate);
+        } else {
+          industries[industryEntryIndex].count += industryUpdate.count;
+        }
+        for(let i = industries.length-1; i >=0; i--) {
+          if(industries[i].count <= 0) {
+            industries.splice(i,1);
+          }
+        }
+      }
     }
     return {years, industries};
+  }
+
+  private static getCurrentFilters(regionDoc: firebase.firestore.DocumentSnapshot<firebase.firestore.DocumentData>) : RegionFilters{
+    let regionData = !!regionDoc && !!regionDoc.data() ? regionDoc.data() : {filters: {}};
+    if(!!regionData) {
+      return !!regionData.filters ? regionData.filters : {};
+    } else {
+      return {};
+    }
   }
 }
 

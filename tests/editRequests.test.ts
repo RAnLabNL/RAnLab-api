@@ -2,7 +2,7 @@ import {DummyDatalayer} from "./utils/testDataLayer";
 import {getMockToken, MockAuth0Return, testify} from "./utils/testify";
 import {createEditEndpoint} from "../src/endpoints/editRequests";
 
-describe("Edit Request tests", () => {
+describe("Edit Request unit tests", () => {
 
   let testDataLayer: DummyDatalayer
   it("Submitted edit requests are seen by region admin", async (done) => {

@@ -39,11 +39,6 @@ export interface Business {
   location?: GeoPoint | null | undefined
 }
 
-interface AuthToken {
-  userId: string,
-  admin: boolean
-}
-
 export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
 
   app.get<GetRegionBusinessRequest>(
@@ -52,7 +47,7 @@ export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLa
     async (request, reply) => {
 
       let {userId, admin} = await verifyJwt(request)
-      if(!(admin || await isRegionManager(userId, request.params.regionId,  dataLayer))) {
+      if(!(admin || await isRegionManager(userId, request.params.regionId, dataLayer))) {
         reply.unauthorized("User does not have access to region");
         return;
       } else {
@@ -76,7 +71,7 @@ export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLa
     '/regions/:regionId/businesses',
     {schema: createBizSchema},
     async (request) => {
-      let {userId, admin} = <AuthToken>await request.jwtVerify();
+      let {userId, admin} = await verifyJwt(request);
       if(!(admin || await isRegionManager(userId, request.params.regionId, dataLayer))) {
         throw app.httpErrors.unauthorized("User does not have access to region");
       } else  if (!!request.body.regionId && request.body.regionId !== request.params.regionId) {
