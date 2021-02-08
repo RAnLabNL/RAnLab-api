@@ -21,7 +21,7 @@ export function registerAuth0(fastify: FastifyInstance, tenant = process.env.AUT
 
 export async function verifyJwt(request: FastifyRequest) {
   let jwt = <any>(await request.jwtVerify());
-  let userId = <string>jwt[`${process.env.AUTH0_CLAIMS_NAMESPACE}/userId`];
-  let admin = <boolean>jwt[`${process.env.AUTH0_CLAIMS_NAMESPACE}/admin`];
+  let userId = <string>jwt[`sub`].split("|")[1];
+  let admin = jwt[`${process.env.AUTH0_CLAIMS_NAMESPACE}/admin`];
   return {userId, admin};
 }

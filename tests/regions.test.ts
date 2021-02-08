@@ -1,7 +1,7 @@
 import createRegionsEndpoint from "../src/endpoints/regions";
-import {testify, getMockToken, MockAuth0Return, setupAuth0TestEnv} from "./utils/testify";
+import {testify, MockAuth0Return, setupAuth0TestEnv} from "./utils/testify";
 import {DummyDatalayer} from "./utils/testDataLayer";
-import {dummyAdminToken, DummyRegion, dummyToken, getRegionsByDummyManager} from "./utils/dummyData";
+import {dummyAdminToken, DummyRegion, dummyRegionManagerToken, getRegionsByDummyManager} from "./utils/dummyData";
 import {Region} from "../src/database/productionDataLayer";
 import {FastifyInstance} from "fastify";
 
@@ -31,7 +31,7 @@ describe("Region Endpoint Tests", () => {
     for(let region of testRegions) {
       const response = await app.inject({
         method: 'GET',
-        headers: {authorization: `Bearer ${getMockToken({userId: "admin", "admin": true})}`},
+        headers: {authorization: `Bearer ${dummyAdminToken}`},
         url: `/regions/manager/${region.manager}`
       });
       authCalls++;
@@ -65,7 +65,7 @@ describe("Region Endpoint Tests", () => {
       method: 'POST',
       url: `/regions/${DummyRegion.name}`,
       payload: updatedRegion,
-      headers: {authorization: `Bearer ${getMockToken({userId: DummyRegion.manager, "admin": false})}`},
+      headers: {authorization: `Bearer ${dummyRegionManagerToken}`},
     });
 
     expect(response.statusCode).toBe(200);
@@ -79,7 +79,7 @@ describe("Region Endpoint Tests", () => {
     const deleteResponse = await app.inject( {
       method: 'DELETE',
       url: `/regions/${DummyRegion.name}`,
-      headers: {authorization: `Bearer ${dummyToken}`}
+      headers: {authorization: `Bearer ${dummyRegionManagerToken}`}
     });
 
     expect(deleteResponse.statusCode).toBe(204);
@@ -96,7 +96,7 @@ describe("Region Endpoint Tests", () => {
     const getRegionAdminResponse = await app.inject({
       method: 'GET',
       url: `/regions/${DummyRegion.name}`,
-      headers: {authorization: `Bearer ${dummyToken}`}
+      headers: {authorization: `Bearer ${dummyRegionManagerToken}`}
     });
 
     expect(getRegionAdminResponse.statusCode).toBe(200);

@@ -1,9 +1,15 @@
 import {createFiltersEndpoint} from "../src/endpoints/filters";
 import {Business, createBusinessesEndpoint} from "../src/endpoints/businesses";
 import {DummyDatalayer} from "./utils/testDataLayer";
-import {createDummyBusiness, createDummyRegion, DummyBiz, DummyRegion} from "./utils/dummyData";
+import {
+  createDummyBusiness,
+  createDummyRegion,
+  DummyBiz,
+  DummyRegion,
+  dummyRegionManagerToken
+} from "./utils/dummyData";
 import createRegionsEndpoint from "../src/endpoints/regions";
-import {getMockToken, MockAuth0Return, setupAuth0TestEnv, testify} from "./utils/testify";
+import { MockAuth0Return, setupAuth0TestEnv, testify} from "./utils/testify";
 
 describe("Filter Endpoint Tests", () => {
   let testDataLayer: DummyDatalayer;
@@ -33,7 +39,7 @@ describe("Filter Endpoint Tests", () => {
     const filterResponse  = await filterApp.inject({
       method: 'GET',
       url: `/regions/${DummyRegion.name}/filters`,
-      headers: { authorization: `Bearer ${getMockToken({userId:DummyRegion.manager, admin: false})}`}
+      headers: { authorization: `Bearer ${dummyRegionManagerToken}`}
     });
 
     expect(filterResponse.statusCode).toBe(200);

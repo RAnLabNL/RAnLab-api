@@ -7,10 +7,14 @@ import fetch from "node-fetch";
 import {createBusinessesEndpoint} from "../src/endpoints/businesses";
 import fastifySensible from "fastify-sensible";
 import {setupAuth0TestEnv} from "./utils/testify";
+import jwtDecode from "jwt-decode";
+import {DummyRegion} from "./utils/dummyData";
+import {DataLayer} from "../src/database/productionDataLayer";
 
 describe("Auth0 integration tests", () => {
   let sut : FastifyInstance;
-  let access_token : string;
+  let userAccessToken : string;
+  let adminAccessToken: string;
 
   beforeAll(async (done) => {
     setupAuth0TestEnv()
@@ -51,7 +55,7 @@ describe("Auth0 integration tests", () => {
       let response = await sut.inject({
         method: "GET",
         url: "/regions/manager/DummyManager",
-        headers: {authorization: `Bearer ${access_token}` }
+        headers: {authorization: `Bearer ${userAccessToken}` }
       });
       expect(response.statusCode).toBe(200);
       done();
@@ -61,7 +65,7 @@ describe("Auth0 integration tests", () => {
       let response = await sut.inject({
         method: "GET",
         url: "/regions/DummyRegion",
-        headers: {authorization: `Bearer ${access_token}` }
+        headers: {authorization: `Bearer ${userAccessToken}` }
       });
       expect(response.statusCode).toBe(200);
       done();
@@ -69,9 +73,12 @@ describe("Auth0 integration tests", () => {
   });
 
   describe("Business Tests", () => {
+    let testDataLayer: DataLayer;
     beforeEach(() => {
+      testDataLayer = new DummyDatalayer();
       addRoutes(sut,
-        () => createBusinessesEndpoint(sut, new DummyDatalayer()),
+        () => createBusinessesEndpoint(sut, testDataLayer),
+        () => createRegionsEndpoint(sut, testDataLayer)
       );
     });
 
@@ -85,10 +92,21 @@ describe("Auth0 integration tests", () => {
     });
 
     it("Allows an authenticated request for businesses", async (done) => {
+      let userId = jwtDecode<string>(userAccessToken).sub.toString().split("|")[1];
+      let authRegion = {...DummyRegion};
+      authRegion.manager = userId
+      let regionsResponse = await sut.inject({
+        method: 'POST',
+        url: `/regions`,
+        payload: authRegion,
+        headers:{authorization: `Bearer ${adminAccessToken}`}
+      });
+      console.log(regionsResponse);
+
       let response = await sut.inject({
         method: "GET",
-        url: "/regions/DummyRegion/businesses",
-        headers: {authorization: `Bearer ${access_token}`}
+        url: `/regions/${DummyRegion.name}/businesses`,
+        headers: {authorization: `Bearer ${userAccessToken}`}
       });
       expect(response.statusCode).toBe(200);
         done();
@@ -96,7 +114,7 @@ describe("Auth0 integration tests", () => {
   });
 
   async function authenticateToTestDomain() {
-    let authResponse = await fetch(`https://${process.env.TEST_AUTH0_DOMAIN}/oauth/token`, {
+    let userResponse = await fetch(`https://${process.env.TEST_AUTH0_DOMAIN}/oauth/token`, {
       method: "POST",
       headers: {'content-type': 'application/json'},
       body: JSON.stringify({
@@ -109,6 +127,20 @@ describe("Auth0 integration tests", () => {
         grant_type: "password"
       })
     });
-    access_token = (await authResponse.json()).access_token;
+    userAccessToken = (await userResponse.json()).access_token;
+    let adminResponse = await fetch(`https://${process.env.TEST_AUTH0_DOMAIN}/oauth/token`, {
+      method: "POST",
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({
+        client_id: process.env.TEST_AUTH0_CLIENT_ID,
+        client_secret: process.env.TEST_AUTH0_CLIENT_SECRET,
+        username: process.env.TEST_AUTH0_ADMIN_USERNAME,
+        password: process.env.TEST_AUTH0_ADMIN_PASSWORD,
+        audience: `https://testing-ranlab.com`,
+        scope: 'read:sample',
+        grant_type: "password"
+      })
+    });
+    adminAccessToken = (await adminResponse.json()).access_token;
   }
 });

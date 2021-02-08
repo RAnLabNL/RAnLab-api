@@ -17,15 +17,17 @@ export function setupAuth0TestEnv() {
   process.env.TEST_AUTH0_DOMAIN = "dev-5ju75h98.us.auth0.com";
   process.env.TEST_AUTH0_CLIENT_ID = "iqwBRZwwuKGz0BkHiInTWTyqvOFLepd6";
   process.env.TEST_AUTH0_USERNAME = "liquiddark@gmail.com";
+  process.env.TEST_AUTH0_ADMIN_USERNAME = "burton.technical.709@gmail.com";
 
 // process.env.TEST_AUTH0_PASSWORD must be set in local runtime environment
+// process.env.TEST_AUTH0_ADMIN_PASSWORD must be set in local runtime environment
 // process.env.TEST_AUTH0_CLIENT_SECRET must be set in local runtime environment
-};
+}
 
 export function getMockToken(payload: {userId: string, admin: boolean  }) {
   let token : any = {};
-  token[`${AUTH0_CLAIMS_NAMESPACE}/userId`] =  payload.userId;
-  token[`${AUTH0_CLAIMS_NAMESPACE}/admin`] =  `${payload.admin}`;
+  token['sub'] = `auth0|${payload.userId}`;
+  token[`${AUTH0_CLAIMS_NAMESPACE}/admin`] = payload.admin;
   return jwt.sign(token, mockSecret)
 }
 

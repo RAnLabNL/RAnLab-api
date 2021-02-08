@@ -3,7 +3,7 @@ import {firestore} from "../src/database/firestore";
 import {Business} from "../src/endpoints/businesses";
 import objectContaining = jasmine.objectContaining;
 
-describe("Production Data Layer Tests", () => {
+describe("Production Data Layer Integration Tests", () => {
   async function deleteRegionsNamed(regionName: string) {
     (await firestore.collection("regions").where("name", "==", regionName).get()).docs
       .forEach((doc) => doc.ref.delete());

@@ -3,10 +3,11 @@ import {createBusinessesEndpoint} from "../src/endpoints/businesses";
 import {
   createDummyBusiness,
   createDummyRegion,
-  DummyBiz, DummyRegion,
+  dummyAdminToken,
+  DummyBiz,
   getDummyBusinesses
 } from "./utils/dummyData";
-import {getMockToken, MockAuth0Return, setupAuth0TestEnv, testify} from "./utils/testify";
+import {MockAuth0Return, setupAuth0TestEnv, testify} from "./utils/testify";
 import createRegionsEndpoint from "../src/endpoints/regions";
 
 describe("Business Endpoint Tests", () => {
@@ -49,7 +50,7 @@ describe("Business Endpoint Tests", () => {
       method: 'POST',
       url: `/businesses/${bizId}`,
       payload: updatedBiz,
-      headers:{authorization: `Bearer ${getMockToken({userId: DummyRegion.manager, admin: false})}`}
+      headers:{authorization: `Bearer ${dummyAdminToken}`}
     });
     expect(updateResponse.statusCode).toBe(200);
     expect(JSON.parse(updateResponse.payload).business).toEqual(updatedBiz);

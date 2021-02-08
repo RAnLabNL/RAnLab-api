@@ -2,9 +2,10 @@ import {FastifyInstance} from "fastify";
 import {Business} from "../../src/endpoints/businesses";
 import {Region} from "../../src/database/productionDataLayer";
 import {getMockToken} from "./testify";
+import jwtDecode from "jwt-decode";
 
 const dummyManager = "DummyManagerId";
-export const dummyToken = getMockToken({userId: dummyManager, admin: false})
+export const dummyRegionManagerToken = getMockToken({userId: dummyManager, admin: false})
 export const dummyAdminToken = getMockToken({userId: "admin", admin: true});
 
 export const DummyRegion: Region = {
@@ -20,16 +21,26 @@ export const DummyBiz: Business = {
   industry: "DummyIndustry"
 };
 
-export async function createDummyRegion(regionsApp: FastifyInstance) {
-  return await regionsApp.inject({
-    method: "POST",
-    url: "/regions",
-    payload: DummyRegion,
-    headers: {authorization: `Bearer ${dummyToken}`}
-  });
+export async function createDummyRegion(regionsApp: FastifyInstance, manager: string = dummyManager) {
+  let region = {...DummyRegion};
+  region.manager = manager
+  let temp = jwtDecode(dummyAdminToken);
+  console.log(temp);
+  try {
+    let response = await regionsApp.inject({
+      method: "POST",
+      url: "/regions",
+      payload: region,
+      headers: {authorization: `Bearer ${dummyAdminToken}`}
+    });
+    return response;
+  } catch (e) {
+    console.log(e);
+    return null;
+  }
 }
 
-export async function createDummyBusiness(bizApp: FastifyInstance, biz : Business = DummyBiz, token: string = dummyToken) {
+export async function createDummyBusiness(bizApp: FastifyInstance, biz : Business = DummyBiz, token: string = dummyRegionManagerToken) {
   return await bizApp.inject({
     method: 'POST',
     url: `/regions/${biz.regionId}/businesses`,
@@ -38,7 +49,7 @@ export async function createDummyBusiness(bizApp: FastifyInstance, biz : Busines
   });
 }
 
-export async function getDummyBusinesses(bizApp: FastifyInstance, token: string = dummyToken) {
+export async function getDummyBusinesses(bizApp: FastifyInstance, token: string = dummyRegionManagerToken) {
   return await bizApp.inject({
     method: 'GET',
     url: `/regions/${DummyBiz.regionId}/businesses`,
@@ -46,7 +57,7 @@ export async function getDummyBusinesses(bizApp: FastifyInstance, token: string 
   });
 }
 
-export async function getRegionsByDummyManager(app: FastifyInstance, token: string = dummyToken) {
+export async function getRegionsByDummyManager(app: FastifyInstance, token: string = dummyRegionManagerToken) {
   return await app.inject({
     method: 'GET',
     headers: {authorization: `Bearer ${token}`},
