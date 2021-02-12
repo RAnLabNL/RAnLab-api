@@ -1,9 +1,9 @@
-import {FastifyInstance, FastifyRequest} from "fastify";
-import fastifySecretProvider from 'fastify-authz-jwks';
-import fastifyJwt, {FastifyJWTOptions} from 'fastify-jwt';
+import {/*FastifyInstance, */ FastifyRequest} from "fastify";
+/*import fastifySecretProvider from 'fastify-authz-jwks';
+import fastifyJwt, {FastifyJWTOptions} from 'fastify-jwt';*/
 
-export function registerAuth0(fastify: FastifyInstance, tenant = process.env.AUTH0_DOMAIN) {
-  const faSecretProvider = fastifySecretProvider({
+export function registerAuth0(/*fastify: FastifyInstance, tenant = process.env.AUTH0_DOMAIN*/) {
+/*  const faSecretProvider = fastifySecretProvider({
     cache: true,
     rateLimit: true,
     jwksRequestsPerMinute: 5,
@@ -16,12 +16,13 @@ export function registerAuth0(fastify: FastifyInstance, tenant = process.env.AUT
     issuer: `https://${tenant}/`,
     algorithms: ['RS256'],
     decode: { complete: true },
-  });
+  });*/
 }
 
-export async function verifyJwt(request: FastifyRequest) {
-  let jwt = <any>(await request.jwtVerify());
+export async function verifyJwt(_/*request*/: FastifyRequest) {
+  return {userId: "dummy", admin: true};
+/*  let jwt = <any>(await request.jwtVerify());
   let userId = <string>jwt[`sub`].split("|")[1];
   let admin = jwt[`${process.env.AUTH0_CLAIMS_NAMESPACE}/admin`];
-  return {userId, admin};
+  return {userId, admin};*/
 }
