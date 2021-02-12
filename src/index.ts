@@ -14,7 +14,7 @@ const port = Number(process.env.PORT || 8080);
 const server = fastify();
 server.register(fastifySensible);
 registerSwagger(server);
-registerAuth0(server);
+registerAuth0(/*server*/);
 registerCorsHandler(server);
 addRoutes(
   server,

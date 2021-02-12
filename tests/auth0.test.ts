@@ -24,7 +24,7 @@ describe("Auth0 integration tests", () => {
 
   beforeEach(() => {
     sut = fastify();
-    registerAuth0(sut, process.env.TEST_AUTH0_DOMAIN);
+    registerAuth0(/*sut, process.env.TEST_AUTH0_DOMAIN*/);
 
     // fastifySensible gives us the decorator function needed when rejecting unauthorized reqs
     sut.register(fastifySensible);
