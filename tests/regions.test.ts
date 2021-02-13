@@ -27,15 +27,15 @@ describe("Region Endpoint Tests", () => {
     let testRegions: Region[] = [{name: "region1", manager: "manager1"}, {name: "region2", manager: "manager2"}];
     testRegions.forEach((r) => testDataLayer.setRegion(r));
     mockAuth0Return.userId = "DummyUser";
-//    let authCalls = 0;
+    let authCalls = 0;
     for(let region of testRegions) {
       const response = await app.inject({
         method: 'GET',
         headers: {authorization: `Bearer ${dummyAdminToken}`},
         url: `/regions/manager/${region.manager}`
       });
-//      authCalls++;
-//      expect(mockAuth0Return.callCount).toBe(authCalls);
+      authCalls++;
+      expect(mockAuth0Return.callCount).toBe(authCalls);
       expect(response.statusCode).toBe(200);
       expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([...testRegions.filter(r => r.manager == region.manager)]));
     }
@@ -48,7 +48,7 @@ describe("Region Endpoint Tests", () => {
     mockAuth0Return.userId = "DummyUser";
     const response = await getRegionsByDummyManager(app);
 
-//    expect(mockAuth0Return.callCount).toBe(1);
+    expect(mockAuth0Return.callCount).toBe(1);
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([DummyRegion]));
     await app.close();
