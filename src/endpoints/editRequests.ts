@@ -1,6 +1,7 @@
 import {FastifyInstance, RequestGenericInterface} from "fastify";
 import {DataLayer} from "../database/productionDataLayer";
 import {Business} from "./businesses";
+import {Auth0JwtVerifier} from "../auth0";
 
 export interface EditRequests {
   adds: AddRequest[] | undefined,
@@ -27,10 +28,11 @@ interface CreateEditRequests extends RequestGenericInterface {
   Body: EditRequests
 }
 
-export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
+export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
   app.post<CreateEditRequests>(
     '/edits',
     async (request, reply) => {
+      await verifyJwt(request);
       let response = {
         status: "ok",
         editRequests: <EditRequests>{}

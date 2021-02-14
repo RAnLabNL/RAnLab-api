@@ -1,12 +1,11 @@
-import {FastifyInstance} from "fastify";
+import {FastifyInstance, FastifyRequest} from "fastify";
 import {Business} from "../../src/endpoints/businesses";
 import {Region} from "../../src/database/productionDataLayer";
 import {getMockToken} from "./testify";
-import jwtDecode from "jwt-decode";
 
 const dummyManager = "DummyManagerId";
-export const dummyRegionManagerToken = getMockToken({userId: dummyManager, admin: false})
-export const dummyAdminToken = getMockToken({userId: "admin", admin: true});
+export const dummyRegionManagerToken = getMockToken({userAppId: dummyManager, admin: false})
+export const dummyAdminToken = getMockToken({userAppId: "admin", admin: true});
 
 export const DummyRegion: Region = {
   name: "DummyRegion",
@@ -21,11 +20,22 @@ export const DummyBiz: Business = {
   industry: "DummyIndustry"
 };
 
+export async function dummyTokenVerifier (req: FastifyRequest) {
+  if(!req.headers.authorization) {
+    return {userAppId: "", admin: false};
+  }
+  if(req.headers.authorization.indexOf(dummyAdminToken) > 0) {
+    return {userAppId: "admin", admin: true};
+  } else if (req.headers.authorization?.indexOf(dummyRegionManagerToken) > 0) {
+    return {userAppId: DummyRegion.manager, admin: false};
+  } else {
+    throw new Error("Unrecognized token");
+  }
+}
+
 export async function createDummyRegion(regionsApp: FastifyInstance, manager: string = dummyManager) {
   let region = {...DummyRegion};
   region.manager = manager
-  let temp = jwtDecode(dummyAdminToken);
-  console.log(temp);
   try {
     let response = await regionsApp.inject({
       method: "POST",

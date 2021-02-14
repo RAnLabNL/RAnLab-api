@@ -1,4 +1,3 @@
-import {registerAuth0} from "../src/auth0";
 import fastify, {FastifyInstance} from "fastify";
 import {addRoutes} from "../src/utils";
 import createRegionsEndpoint from "../src/endpoints/regions";
@@ -6,25 +5,27 @@ import {DummyDatalayer} from "./utils/testDataLayer";
 import fetch from "node-fetch";
 import {createBusinessesEndpoint} from "../src/endpoints/businesses";
 import fastifySensible from "fastify-sensible";
-import {setupAuth0TestEnv} from "./utils/testify";
-import jwtDecode from "jwt-decode";
+import { setupAuth0TestEnv} from "./utils/testify";
 import {DummyRegion} from "./utils/dummyData";
 import {DataLayer} from "../src/database/productionDataLayer";
+import {getUserInfo, verifyJwt} from "../src/auth0";
 
 describe("Auth0 integration tests", () => {
   let sut : FastifyInstance;
   let userAccessToken : string;
   let adminAccessToken: string;
+  let userAppId: string;
 
   beforeAll(async (done) => {
-    setupAuth0TestEnv()
+    setupAuth0TestEnv();
     await authenticateToTestDomain();
+    let userInfo = await getUserInfo(`Bearer ${userAccessToken}`);
+    userAppId = userInfo.userId.split("|")[1];
     done();
   });
 
   beforeEach(() => {
     sut = fastify();
-    registerAuth0(/*sut, process.env.TEST_AUTH0_DOMAIN*/);
 
     // fastifySensible gives us the decorator function needed when rejecting unauthorized reqs
     sut.register(fastifySensible);
@@ -38,7 +39,7 @@ describe("Auth0 integration tests", () => {
   describe("Region Tests", () => {
     beforeEach(() => {
       addRoutes(sut,
-        () => createRegionsEndpoint(sut, new DummyDatalayer()),
+        () => createRegionsEndpoint(sut, new DummyDatalayer(), verifyJwt),
       );
     });
 
@@ -77,8 +78,8 @@ describe("Auth0 integration tests", () => {
     beforeEach(() => {
       testDataLayer = new DummyDatalayer();
       addRoutes(sut,
-        () => createBusinessesEndpoint(sut, testDataLayer),
-        () => createRegionsEndpoint(sut, testDataLayer)
+        () => createBusinessesEndpoint(sut, testDataLayer, verifyJwt),
+        () => createRegionsEndpoint(sut, testDataLayer, verifyJwt)
       );
     });
 
@@ -92,15 +93,15 @@ describe("Auth0 integration tests", () => {
     });
 
     it("Allows an authenticated request for businesses", async (done) => {
-      let userId = jwtDecode<string>(userAccessToken).sub.toString().split("|")[1];
       let authRegion = {...DummyRegion};
-      authRegion.manager = userId
+      authRegion.manager = userAppId
       let regionsResponse = await sut.inject({
         method: 'POST',
         url: `/regions`,
         payload: authRegion,
         headers:{authorization: `Bearer ${adminAccessToken}`}
       });
+      expect(regionsResponse.statusCode).toBe(201);
       console.log(regionsResponse);
 
       let response = await sut.inject({
@@ -114,33 +115,32 @@ describe("Auth0 integration tests", () => {
   });
 
   async function authenticateToTestDomain() {
-    let userResponse = await fetch(`https://${process.env.TEST_AUTH0_DOMAIN}/oauth/token`, {
+    let userResponse = await fetch(`https://${process.env.AUTH0_DOMAIN}/oauth/token`, {
       method: "POST",
       headers: {'content-type': 'application/json'},
       body: JSON.stringify({
-        client_id: process.env.TEST_AUTH0_CLIENT_ID,
-        client_secret: process.env.TEST_AUTH0_CLIENT_SECRET,
+        client_id: process.env.AUTH0_CLIENT_ID,
+        client_secret: process.env.AUTH0_CLIENT_SECRET,
         username: process.env.TEST_AUTH0_USERNAME,
         password: process.env.TEST_AUTH0_PASSWORD,
-        audience: `https://testing-ranlab.com`,
-        scope: 'read:sample',
+        scope: 'openid',
         grant_type: "password"
       })
     });
     userAccessToken = (await userResponse.json()).access_token;
-    let adminResponse = await fetch(`https://${process.env.TEST_AUTH0_DOMAIN}/oauth/token`, {
+    let adminResponse = await fetch(`https://${process.env.AUTH0_DOMAIN}/oauth/token`, {
       method: "POST",
       headers: {'content-type': 'application/json'},
       body: JSON.stringify({
-        client_id: process.env.TEST_AUTH0_CLIENT_ID,
-        client_secret: process.env.TEST_AUTH0_CLIENT_SECRET,
+        client_id: process.env.AUTH0_CLIENT_ID,
+        client_secret: process.env.AUTH0_CLIENT_SECRET,
         username: process.env.TEST_AUTH0_ADMIN_USERNAME,
         password: process.env.TEST_AUTH0_ADMIN_PASSWORD,
-        audience: `https://testing-ranlab.com`,
-        scope: 'read:sample',
+        scope: 'openid',
         grant_type: "password"
       })
     });
-    adminAccessToken = (await adminResponse.json()).access_token;
+    let adminJson = await adminResponse.json();
+    adminAccessToken = adminJson.access_token;
   }
 });

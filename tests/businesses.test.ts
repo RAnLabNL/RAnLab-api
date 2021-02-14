@@ -4,10 +4,10 @@ import {
   createDummyBusiness,
   createDummyRegion,
   dummyAdminToken,
-  DummyBiz,
+  DummyBiz, DummyRegion,
   getDummyBusinesses
 } from "./utils/dummyData";
-import {MockAuth0Return, setupAuth0TestEnv, testify} from "./utils/testify";
+import {getTestJwtVerifier,  setupAuth0TestEnv, testify} from "./utils/testify";
 import createRegionsEndpoint from "../src/endpoints/regions";
 
 describe("Business Endpoint Tests", () => {
@@ -19,14 +19,15 @@ describe("Business Endpoint Tests", () => {
 
   beforeEach(async (done) => {
     testDataLayer = new DummyDatalayer();
-    const server = testify(new MockAuth0Return());
-    const regionsApp = createRegionsEndpoint(server, testDataLayer);
+    const server = testify();
+    const regionsApp = createRegionsEndpoint(server, testDataLayer, getTestJwtVerifier("admin", true));
     await createDummyRegion(regionsApp);
     done();
   });
+
   it('Can create and retrieve a valid business', async(done) => {
-    const server = testify(new MockAuth0Return());
-    const bizApp = createBusinessesEndpoint(server, testDataLayer)
+    const server = testify();
+    const bizApp = createBusinessesEndpoint(server, testDataLayer, getTestJwtVerifier(DummyRegion.manager, false))
     const createResponse = await createDummyBusiness(bizApp);
     expect(createResponse.statusCode).toBe(200);
 
@@ -41,7 +42,7 @@ describe("Business Endpoint Tests", () => {
   });
 
   it('Can update and retrieve a business', async(done) => {
-    const bizApp = createBusinessesEndpoint(testify(new MockAuth0Return()), testDataLayer);
+    const bizApp = createBusinessesEndpoint(testify(), testDataLayer, getTestJwtVerifier("admin", true));
 
     const createResponse = await createDummyBusiness(bizApp);
     const bizId = JSON.parse(createResponse.payload).businessId;

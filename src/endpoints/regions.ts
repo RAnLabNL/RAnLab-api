@@ -7,7 +7,7 @@ import {
   updateRegionReqSchema,
   deleteRegionReqSchema
 } from "./docs/regionSchemas";
-import {verifyJwt} from "../auth0";
+import {Auth0JwtVerifier} from "../auth0";
 import {isRegionManager} from "../utils";
 
 interface GetManagedRegionsRequest extends RequestGenericInterface {
@@ -39,13 +39,13 @@ interface UpdateRegionRequest extends RequestGenericInterface {
   Body: Region
 }
 
-export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : DataLayer) {
+export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : DataLayer, verifyJwt: Auth0JwtVerifier) {
   app.get<GetManagedRegionsRequest>(
     '/regions/manager/:managerId',
     {schema: getManagedRegionsReqSchema},
     async (request,reply) => {
-      let {userId, admin} = await verifyJwt(request);
-      if(!userId) {
+      let {userAppId, admin} = await verifyJwt(request);
+      if(!userAppId) {
         reply.send(reply.unauthorized);
         return;
       } else {
@@ -54,7 +54,7 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
           date: Date.now(),
           regions: <Region[]>[]
         };
-        if (admin || userId == request.params.managerId) {
+        if (admin || userAppId == request.params.managerId) {
           response.regions.push(...(await dataLayer.getRegionsManagedBy(request.params.managerId)));
         }
         return JSON.stringify(response);
@@ -65,9 +65,9 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
   app.get<GetSingleRegionRequest>(
     '/regions/:regionId',
     {schema: getSingleRegionReqSchema},
-    async(request ) => {
+    async(request, reply ) => {
 
-      let {userId, admin} = await verifyJwt(request);
+      let {userAppId, admin} = await verifyJwt(request);
       let response = {
         status: "ok",
         date: Date.now(),
@@ -76,8 +76,11 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
       let regions : Region[] ;
       if(admin) {
         regions = (await dataLayer.getAllRegions());
+      } else if (!userAppId) {
+        reply.unauthorized();
+        return;
       } else {
-        regions = (await dataLayer.getRegionsManagedBy(userId));
+        regions = (await dataLayer.getRegionsManagedBy(userAppId));
       }
       let region: Region | undefined = regions.find((r => r.name == request.params.regionId))
       response.region = !!region ? region : null;
@@ -109,8 +112,8 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
     '/regions/:regionId',
     {schema: updateRegionReqSchema},
     async(request, reply) => {
-      let {userId, admin} = await verifyJwt(request);
-      if(!(admin || await isRegionManager(userId, request.params.regionId, dataLayer))) {
+      let {userAppId, admin} = await verifyJwt(request);
+      if(!(admin || await isRegionManager(userAppId, request.params.regionId, dataLayer))) {
         reply.unauthorized("Only region managers and administrators can update region data")
         return;
       } else {

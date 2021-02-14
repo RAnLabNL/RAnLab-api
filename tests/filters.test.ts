@@ -6,10 +6,11 @@ import {
   createDummyRegion,
   DummyBiz,
   DummyRegion,
-  dummyRegionManagerToken
+  dummyRegionManagerToken,
+  dummyTokenVerifier
 } from "./utils/dummyData";
 import createRegionsEndpoint from "../src/endpoints/regions";
-import { MockAuth0Return, setupAuth0TestEnv, testify} from "./utils/testify";
+import {setupAuth0TestEnv, testify} from "./utils/testify";
 
 describe("Filter Endpoint Tests", () => {
   let testDataLayer: DummyDatalayer;
@@ -17,9 +18,9 @@ describe("Filter Endpoint Tests", () => {
   beforeAll(async (done) => {
     setupAuth0TestEnv();
     testDataLayer = new DummyDatalayer();
-    const server = testify(new MockAuth0Return());
-    const regionsApp = createRegionsEndpoint(server, testDataLayer);
-    const bizApp = createBusinessesEndpoint(server, testDataLayer);
+    const server = testify();
+    const regionsApp = createRegionsEndpoint(server, testDataLayer, dummyTokenVerifier);
+    const bizApp = createBusinessesEndpoint(server, testDataLayer, dummyTokenVerifier);
 
     await createDummyRegion(regionsApp);
     await createDummyBusiness(bizApp);
@@ -34,8 +35,8 @@ describe("Filter Endpoint Tests", () => {
   });
 
   it('Returns only the region-specific filter data', async (done) => {
-    const server = testify(new MockAuth0Return());
-    const filterApp = createFiltersEndpoint(server, testDataLayer);
+    const server = testify();
+    const filterApp = createFiltersEndpoint(server, testDataLayer,  dummyTokenVerifier);
     const filterResponse  = await filterApp.inject({
       method: 'GET',
       url: `/regions/${DummyRegion.name}/filters`,

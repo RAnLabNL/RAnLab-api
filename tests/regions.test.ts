@@ -1,13 +1,21 @@
 import createRegionsEndpoint from "../src/endpoints/regions";
-import {testify, MockAuth0Return, setupAuth0TestEnv} from "./utils/testify";
+import {
+  testify,
+  setupAuth0TestEnv
+} from "./utils/testify";
 import {DummyDatalayer} from "./utils/testDataLayer";
-import {dummyAdminToken, DummyRegion, dummyRegionManagerToken, getRegionsByDummyManager} from "./utils/dummyData";
+import {
+  dummyAdminToken,
+  DummyRegion,
+  dummyRegionManagerToken,
+  getRegionsByDummyManager,
+  dummyTokenVerifier
+} from "./utils/dummyData";
 import {Region} from "../src/database/productionDataLayer";
 import {FastifyInstance} from "fastify";
 
 describe("Region Endpoint Tests", () => {
   let testDataLayer: DummyDatalayer;
-  let mockAuth0Return: MockAuth0Return;
   let testApp: FastifyInstance;
 
   beforeAll(() => {
@@ -16,26 +24,21 @@ describe("Region Endpoint Tests", () => {
 
   beforeEach(async (done) => {
     testDataLayer= new DummyDatalayer()
-    mockAuth0Return = new MockAuth0Return();
-    testApp = testify(mockAuth0Return);
+    testApp = testify();
     await testDataLayer.setRegion(DummyRegion);
     done();
   });
 
   it('Can create and retrieve all regions as SysAdmin', async (done) => {
-    const app = createRegionsEndpoint(testApp, testDataLayer);
+    const app = createRegionsEndpoint(testApp, testDataLayer, dummyTokenVerifier);
     let testRegions: Region[] = [{name: "region1", manager: "manager1"}, {name: "region2", manager: "manager2"}];
     testRegions.forEach((r) => testDataLayer.setRegion(r));
-    mockAuth0Return.userId = "DummyUser";
-    let authCalls = 0;
     for(let region of testRegions) {
       const response = await app.inject({
         method: 'GET',
         headers: {authorization: `Bearer ${dummyAdminToken}`},
         url: `/regions/manager/${region.manager}`
       });
-      authCalls++;
-      expect(mockAuth0Return.callCount).toBe(authCalls);
       expect(response.statusCode).toBe(200);
       expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([...testRegions.filter(r => r.manager == region.manager)]));
     }
@@ -44,11 +47,9 @@ describe("Region Endpoint Tests", () => {
   });
 
   it('Can create and retrieve a region as Region Manager', async (done) => {
-    const app = createRegionsEndpoint(testApp, testDataLayer);
-    mockAuth0Return.userId = "DummyUser";
+    const app = createRegionsEndpoint(testApp, testDataLayer, dummyTokenVerifier);
     const response = await getRegionsByDummyManager(app);
 
-    expect(mockAuth0Return.callCount).toBe(1);
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([DummyRegion]));
     await app.close();
@@ -56,7 +57,7 @@ describe("Region Endpoint Tests", () => {
   });
 
   it('Can update and retrieve a region', async (done) => {
-    const app = createRegionsEndpoint(testApp, testDataLayer);
+    const app = createRegionsEndpoint(testApp, testDataLayer, dummyTokenVerifier);
     const updatedRegion = {
       name: "TestRegion",
       manager: "TestManager"
@@ -75,7 +76,7 @@ describe("Region Endpoint Tests", () => {
   });
 
   it('Can delete a region', async (done) => {
-    const app = createRegionsEndpoint(testApp, testDataLayer);
+    const app = createRegionsEndpoint(testApp, testDataLayer, dummyTokenVerifier);
     const deleteResponse = await app.inject( {
       method: 'DELETE',
       url: `/regions/${DummyRegion.name}`,
@@ -92,7 +93,7 @@ describe("Region Endpoint Tests", () => {
   });
 
   it("Can retrieve a single region as either region admin or system admin", async(done) => {
-    const app = createRegionsEndpoint(testApp, testDataLayer);
+    const app = createRegionsEndpoint(testApp, testDataLayer, dummyTokenVerifier);
     const getRegionAdminResponse = await app.inject({
       method: 'GET',
       url: `/regions/${DummyRegion.name}`,

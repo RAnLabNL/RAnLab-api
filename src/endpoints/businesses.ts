@@ -4,7 +4,7 @@ import firebase from "firebase";
 import GeoPoint = firebase.firestore.GeoPoint;
 import {createBizSchema, getBizSchema, updateBizSchema} from "./docs/businessesSchemas";
 import {isRegionManager} from "../utils";
-import {verifyJwt} from "../auth0";
+import {Auth0JwtVerifier} from "../auth0";
 
 interface GetRegionBusinessRequest extends RequestGenericInterface {
   Params: {
@@ -39,15 +39,15 @@ export interface Business {
   location?: GeoPoint | null | undefined
 }
 
-export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
+export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
 
   app.get<GetRegionBusinessRequest>(
     '/regions/:regionId/businesses',
     {schema: getBizSchema},
     async (request, reply) => {
 
-      let {userId, admin} = await verifyJwt(request)
-      if(!(admin || await isRegionManager(userId, request.params.regionId, dataLayer))) {
+      let {userAppId, admin} = await verifyJwt(request)
+      if(!(admin || await isRegionManager(userAppId, request.params.regionId, dataLayer))) {
         reply.unauthorized("User does not have access to region");
         return;
       } else {
@@ -71,8 +71,8 @@ export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLa
     '/regions/:regionId/businesses',
     {schema: createBizSchema},
     async (request) => {
-      let {userId, admin} = await verifyJwt(request);
-      if(!(admin || await isRegionManager(userId, request.params.regionId, dataLayer))) {
+      let {userAppId, admin} = await verifyJwt(request);
+      if(!(admin || await isRegionManager(userAppId, request.params.regionId, dataLayer))) {
         throw app.httpErrors.unauthorized("User does not have access to region");
       } else  if (!!request.body.regionId && request.body.regionId !== request.params.regionId) {
         throw app.httpErrors.badRequest("Region ID mismatch between route and body ");

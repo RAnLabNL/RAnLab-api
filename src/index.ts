@@ -6,22 +6,21 @@ import { createBusinessesEndpoint} from "./endpoints/businesses";
 import createRegionsEndpoint from "./endpoints/regions";
 import {productionDataLayer} from "./database/productionDataLayer";
 import {createFiltersEndpoint} from "./endpoints/filters";
-import {registerAuth0} from "./auth0";
 import {registerCorsHandler} from "./cors";
 import {registerSwagger} from "./swagger";
+import {verifyJwt} from "./auth0";
 
 const port = Number(process.env.PORT || 8080);
 const server = fastify();
 server.register(fastifySensible);
 registerSwagger(server);
-registerAuth0(/*server*/);
 registerCorsHandler(server);
 addRoutes(
   server,
   createPingEndpoint,
-  (app: FastifyInstance) => createFiltersEndpoint(app, productionDataLayer),
-  (app: FastifyInstance) => createRegionsEndpoint(app, productionDataLayer),
-  (app: FastifyInstance) => createBusinessesEndpoint(app, productionDataLayer)
+  (app: FastifyInstance) => createFiltersEndpoint(app, productionDataLayer, verifyJwt),
+  (app: FastifyInstance) => createRegionsEndpoint(app, productionDataLayer, verifyJwt),
+  (app: FastifyInstance) => createBusinessesEndpoint(app, productionDataLayer, verifyJwt)
 );
 
 server.listen(port, '::', (err, address) => {

@@ -1,7 +1,7 @@
 import type {FastifyInstance, RequestGenericInterface} from 'fastify';
 import {DataLayer, Filters} from "../database/productionDataLayer";
 import {getFilterSchema} from "./docs/filterSchemas";
-import {verifyJwt} from "../auth0";
+import {Auth0JwtVerifier} from "../auth0";
 
 interface GetFiltersRequest extends RequestGenericInterface {
   Params: {
@@ -9,11 +9,11 @@ interface GetFiltersRequest extends RequestGenericInterface {
   }
 }
 
-export function createFiltersEndpoint(app: FastifyInstance, dataLayer: DataLayer) {
+export function createFiltersEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
   app.get<GetFiltersRequest>('/regions/:regionId/filters', {schema: getFilterSchema},
     async (request, reply) => {
-      let {userId} = await verifyJwt(request);
-      if (!userId) {
+      let {userAppId} = await verifyJwt(request);
+      if (!userAppId) {
         reply.unauthorized("User not found!");
         return;
       } else {

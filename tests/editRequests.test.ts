@@ -1,21 +1,20 @@
 import {DummyDatalayer} from "./utils/testDataLayer";
-import {getMockToken, MockAuth0Return, testify} from "./utils/testify";
+import { testify} from "./utils/testify";
 import {createEditEndpoint} from "../src/endpoints/editRequests";
+import {dummyRegionManagerToken, dummyTokenVerifier} from "./utils/dummyData";
 
 describe("Edit Request unit tests", () => {
 
   let testDataLayer: DummyDatalayer
   it("Submitted edit requests are seen by region admin", async (done) => {
     testDataLayer = new DummyDatalayer();
-    let mockAuth0 = new MockAuth0Return();
-    const testApp = testify(mockAuth0);
-    mockAuth0.userId = "nobody";
-    let editEndpoint = createEditEndpoint(testApp, testDataLayer);
+    const testApp = testify();
+    let editEndpoint = createEditEndpoint(testApp, testDataLayer, dummyTokenVerifier);
 
     const editResponse = await editEndpoint.inject({
       method: "POST",
       url: `/edits`,
-      headers: {authorization: `Bearer ${getMockToken({userId: mockAuth0.userId, admin: false})}`},
+      headers: {authorization: `Bearer ${dummyRegionManagerToken}`},
       payload: {
         adds: [],
         updates: [],

@@ -1,13 +1,11 @@
 import {registerCorsHandler} from "../src/cors";
-import {MockAuth0Return, testify} from "./utils/testify";
+import { testify} from "./utils/testify";
 import {DummyRegion} from "./utils/dummyData";
 
 
 describe('CORS Handler Tests', function () {
   async function testCorsRequest(origin: string, originResponse: string | boolean) {
-    let mockReturn = new MockAuth0Return();
-    let testApp = testify(mockReturn);
-    mockReturn.userId = "Dummy";
+    let testApp = testify();
     registerCorsHandler(testApp);
     let response = await testApp.inject({
       method: 'OPTIONS',
