@@ -1,6 +1,6 @@
 import type {FastifyInstance, RequestGenericInterface} from 'fastify';
 import {DataLayer, Filters} from "../database/productionDataLayer";
-import {getFilterSchema} from "./docs/filterSchemas";
+import {getAllIndustriesSchema, getFilterSchema} from "./docs/filterSchemas";
 import {Auth0JwtVerifier} from "../auth0";
 
 interface GetFiltersRequest extends RequestGenericInterface {
@@ -27,6 +27,36 @@ export function createFiltersEndpoint(app: FastifyInstance, dataLayer: DataLayer
       }
     }
   );
+
+  app.get("/filters/industries", {schema: getAllIndustriesSchema},
+    async (request, reply) =>{
+      let {admin} = await verifyJwt(request);
+      if(!admin) {
+        reply.unauthorized("Only admins have access to this data");
+        return;
+      } else {
+        let response = {
+          status: "ok",
+          date: Date.now(),
+          industries: <string[]> []
+        };
+        let regions = await dataLayer.getAllRegions();
+        regions.forEach((r) => {
+          if (!!r.filters && !!r.filters.industries) {
+            r.filters.industries.forEach((f_i) => {
+              if(!!f_i.industry) {
+                if (!response.industries.find((r_i) => r_i === f_i.industry)) {
+                  response.industries.push(f_i.industry);
+                }
+              }
+            })
+          }
+        });
+
+        return JSON.stringify(response);
+      }
+    }
+  )
 
   return app;
 }

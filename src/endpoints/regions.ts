@@ -113,11 +113,14 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
     {schema: updateRegionReqSchema},
     async(request, reply) => {
       let {userAppId, admin} = await verifyJwt(request);
-      if(!(admin || await isRegionManager(userAppId, request.params.regionId, dataLayer))) {
+      let UpdatedRegion: Region = <Region>{...request.body};
+      if(!admin && !!UpdatedRegion.manager && !(await isRegionManager(UpdatedRegion.manager, request.params.regionId, dataLayer))) {
+        reply.unauthorized("Only admin users can update the region manager");
+        return;
+      } else if(!(admin || await isRegionManager(userAppId, request.params.regionId, dataLayer))) {
         reply.unauthorized("Only region managers and administrators can update region data")
         return;
       } else {
-        let UpdatedRegion: Region = <Region>{...request.body};
         let response = {
           status: "ok",
           region: UpdatedRegion

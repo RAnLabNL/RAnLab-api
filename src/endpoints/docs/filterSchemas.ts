@@ -10,7 +10,7 @@ export const filtersSchema = {
     },
     industries: {
       type: 'array',
-      items: {type: 'string'}
+      items: {type: 'string' }
     },
   }
 }
@@ -23,10 +23,30 @@ export const getFilterSchema = {
     200: {
       type: 'object',
       properties: {
-        status: { type: 'string'},
-        date: {type: 'string' },
+        status: { type: 'string' },
+        date: { type: 'string' },
         filters: filtersSchema
       }
     }
   }
-}
+};
+
+export const getAllIndustriesSchema = {
+  description: 'Admin-only endpoint allowing access to the global list of industries',
+  security: [],
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        status: {type: 'string'},
+        date: {type: 'string'},
+        industries: {
+          type: "array",
+          items: {
+            type: "string"
+          }
+        }
+      }
+    }
+  }
+};

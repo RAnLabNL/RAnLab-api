@@ -60,7 +60,7 @@ describe("Region Endpoint Tests", () => {
     const app = createRegionsEndpoint(testApp, testDataLayer, dummyTokenVerifier);
     const updatedRegion = {
       name: "TestRegion",
-      manager: "TestManager"
+      manager: DummyRegion.manager
     };
     const response = await app.inject( {
       method: 'POST',
@@ -74,6 +74,34 @@ describe("Region Endpoint Tests", () => {
     await app.close();
     done();
   });
+
+  it('Can update region manager only as admin', async (done) => {
+    const app = createRegionsEndpoint(testApp, testDataLayer, dummyTokenVerifier);
+    const updatedRegion = {
+      name: "TestRegion",
+      manager: `Not ${DummyRegion.manager}`
+    };
+    const nonAdminResponse = await app.inject( {
+      method: 'POST',
+      url: `/regions/${DummyRegion.name}`,
+      payload: updatedRegion,
+      headers: {authorization: `Bearer ${dummyRegionManagerToken}`},
+    });
+    expect(nonAdminResponse.statusCode).toBe(401);
+
+    const adminResponse = await app.inject( {
+      method: 'POST',
+      url: `/regions/${DummyRegion.name}`,
+      payload: updatedRegion,
+      headers: {authorization: `Bearer ${dummyAdminToken}`},
+    });
+    expect(adminResponse.statusCode).toBe(200);
+    expect(JSON.parse(adminResponse.payload).region).toStrictEqual(updatedRegion);
+
+    await app.close();
+    done();
+  });
+
 
   it('Can delete a region', async (done) => {
     const app = createRegionsEndpoint(testApp, testDataLayer, dummyTokenVerifier);

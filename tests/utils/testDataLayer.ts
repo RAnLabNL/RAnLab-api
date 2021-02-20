@@ -21,6 +21,20 @@ export class DummyDatalayer implements DataLayer {
 
   async setBusiness(business:Business): Promise<IdObject> {
     this.businesses.push(business);
+    let regionIndex = this.regions.findIndex((r) => r.name == business.regionId);
+    let bizRegion = this.regions[regionIndex]
+    if(!bizRegion.filters) {
+      bizRegion.filters = {};
+    }
+    if(!bizRegion.filters.industries) {
+      bizRegion.filters.industries = [];
+    }
+    let industryIndex = bizRegion.filters.industries.findIndex((i) => i.industry === business.industry);
+    if(industryIndex < 0) {
+      bizRegion.filters.industries.push({industry: business.industry, count: 1});
+    } else {
+      bizRegion.filters.industries[industryIndex].count++;
+    }
     return {id:"1"};
   }
 

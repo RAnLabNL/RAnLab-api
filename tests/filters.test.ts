@@ -3,7 +3,7 @@ import {Business, createBusinessesEndpoint} from "../src/endpoints/businesses";
 import {DummyDatalayer} from "./utils/testDataLayer";
 import {
   createDummyBusiness,
-  createDummyRegion,
+  createDummyRegion, dummyAdminToken,
   DummyBiz,
   DummyRegion,
   dummyRegionManagerToken,
@@ -23,11 +23,20 @@ describe("Filter Endpoint Tests", () => {
     const bizApp = createBusinessesEndpoint(server, testDataLayer, dummyTokenVerifier);
 
     await createDummyRegion(regionsApp);
+    let notDummyRegion = {...DummyRegion};
+    notDummyRegion.name = `Not ${DummyRegion.name}`;
+    await regionsApp.inject({
+      method: "POST",
+      url: "/regions",
+      payload: notDummyRegion,
+      headers: {authorization: `Bearer ${dummyAdminToken}`}
+    });
+
     await createDummyBusiness(bizApp);
     await createDummyBusiness(bizApp, <Business>{
       name: `Not ${DummyBiz.name}`,
       employees: 1,
-      regionId: `Not ${DummyRegion.name}`,
+      regionId: notDummyRegion.name,
       industry: `Not ${DummyBiz.industry}`,
       year_added: DummyBiz.year_added + 1
     });
@@ -51,6 +60,38 @@ describe("Filter Endpoint Tests", () => {
       })
     );
 
+    await filterApp.close();
+    done();
+  });
+
+  it("Gets all industries for admin users", async (done) => {
+    const server = testify();
+    const filterApp = createFiltersEndpoint(server, testDataLayer, dummyTokenVerifier);
+    const industriesResponse = await filterApp.inject({
+      method: 'GET',
+      url: `/filters/industries`,
+      headers: {authorization: `Bearer ${dummyAdminToken}`}
+    });
+    expect(industriesResponse.statusCode).toBe(200);
+    expect(JSON.parse(industriesResponse.payload).industries).toStrictEqual(
+      expect.arrayContaining([
+          DummyBiz.industry,
+          `Not ${DummyBiz.industry}`
+        ])
+      );
+    await filterApp.close();
+    done();
+  });
+
+  it("Denies all industries for non-admin users", async (done) => {
+    const server = testify();
+    const filterApp = createFiltersEndpoint(server, testDataLayer, dummyTokenVerifier);
+    const industriesResponse = await filterApp.inject({
+      method: 'GET',
+      url: `/filters/industries`,
+      headers: {authorization: `Bearer ${dummyRegionManagerToken}`}
+    });
+    expect(industriesResponse.statusCode).toBe(401);
     await filterApp.close();
     done();
   });
