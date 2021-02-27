@@ -1,4 +1,4 @@
-import {DummyDatalayer} from "./utils/testDataLayer";
+import {DummyDatalayer} from "./testUtils/testDataLayer";
 import {createBusinessesEndpoint} from "../src/endpoints/businesses";
 import {
   createDummyBusiness,
@@ -6,8 +6,8 @@ import {
   dummyAdminToken,
   DummyBiz, DummyRegion,
   getDummyBusinesses
-} from "./utils/dummyData";
-import {getTestJwtVerifier,  setupAuth0TestEnv, testify} from "./utils/testify";
+} from "./testUtils/dummyData";
+import {getTestJwtVerifier,  setupAuth0TestEnv, testify} from "./testUtils/testify";
 import createRegionsEndpoint from "../src/endpoints/regions";
 
 describe("Business Endpoint Tests", () => {

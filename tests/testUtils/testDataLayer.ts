@@ -1,19 +1,12 @@
 import {DataLayer, Filters, IdObject, Region} from "../../src/database/productionDataLayer";
 import {Business} from "../../src/endpoints/businesses";
-import { AddRequest, UpdateRequest, DeleteRequest } from "../../src/endpoints/editRequests";
+import { EditRequest } from "../../src/endpoints/editRequest";
 
 export class DummyDatalayer implements DataLayer {
-  createAddRequest(_: AddRequest): Promise<AddRequest> {
-      throw new Error("Method not implemented.");
-  }
-  createUpdateRequest(_: UpdateRequest): Promise<UpdateRequest> {
-      throw new Error("Method not implemented.");
-  }
-  createDeleteRequests(_: DeleteRequest): Promise<DeleteRequest> {
-      throw new Error("Method not implemented.");
-  }
+
   businesses: Business[] = [];
   regions: Region[] = [];
+  editRequests: EditRequest[] = [];
 
   getBusinessesByRegion(_:string): Promise<Business[]> {
     return Promise.resolve(this.businesses);
@@ -62,7 +55,23 @@ export class DummyDatalayer implements DataLayer {
     this.regions = this.regions.filter((r) => r.name !== regionId);
   }
 
+  async createEditRequest(editRequest: EditRequest): Promise<IdObject> {
+    const newRequest = {...editRequest, id: new Date().toISOString()}
+    this.editRequests.push(newRequest);
+    return {id: newRequest.id} ;
+  }
+
+  async getEditRequestsForRegion(regionId: string): Promise<EditRequest[]> {
+    return this.editRequests.filter((req) => req.regionId === regionId);
+  }
+
+  async getAllEditRequests(): Promise<EditRequest[]> {
+    return this.editRequests;
+  }
+
   clearRegions() {
     this.regions = [];
   }
+
+
 }

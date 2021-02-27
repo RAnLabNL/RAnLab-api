@@ -1,7 +1,8 @@
 import {Business} from "../endpoints/businesses";
 import {firestore} from "./firestore";
-import {AddRequest, DeleteRequest, UpdateRequest} from "../endpoints/editRequests";
+import { EditRequest } from "../endpoints/editRequest";
 import firebase from "firebase";
+import Timestamp = firebase.firestore.Timestamp;
 
 export interface IdObject {
   id: string
@@ -32,33 +33,12 @@ export interface DataLayer {
   setRegion(region: Region): Promise<IdObject>;
   deleteRegion(regionId: string): Promise<void>;
   getAllRegions(): Promise<Region[]>;
-  createAddRequest(add: AddRequest): Promise<AddRequest>;
-  createUpdateRequest(updateRequest: UpdateRequest): Promise<UpdateRequest>;
-  createDeleteRequests(deleteRequest: DeleteRequest): Promise<DeleteRequest>;
+  createEditRequest(add: EditRequest): Promise<IdObject>;
+  getEditRequestsForRegion(regionId: string): Promise<EditRequest[]>;
+  getAllEditRequests(): Promise<EditRequest[]>;
 }
 
 export class ProductionDataLayer implements DataLayer {
-  async createAddRequest(addRequest: AddRequest): Promise<AddRequest> {
-    let doc = firestore.collection("editRequests").doc();
-    await doc.set(addRequest);
-    addRequest.id = doc.id;
-    return addRequest;
-  }
-
-  async createUpdateRequest(updateRequest: UpdateRequest): Promise<UpdateRequest> {
-    let doc = firestore.collection("editRequests").doc();
-    await doc.set(updateRequest);
-    updateRequest.id = doc.id;
-    return updateRequest;
-  }
-
-  async createDeleteRequests(deleteRequest: DeleteRequest): Promise<DeleteRequest> {
-    let doc = firestore.collection("editRequests").doc();
-    await doc.set(deleteRequest);
-    deleteRequest.id = doc.id;
-    return deleteRequest;
-  }
-
   async getBusinessesByRegion(regionId: string) : Promise<Business[]> {
     let businessSnapshot = await firestore.collection("businesses").where("regionId", "==", regionId).get();
     return businessSnapshot.docs.map((b) => (<Business>{...b.data(), id: b.id}));
@@ -146,6 +126,56 @@ export class ProductionDataLayer implements DataLayer {
     );
   }
 
+  async createEditRequest(editRequest: EditRequest): Promise<IdObject> {
+    let doc = firestore.collection("editRequests").doc();
+    await doc.set(editRequest);
+    return {id :  doc.id};
+  }
+
+  async getEditRequestsForRegion(regionId: string) : Promise<EditRequest[]> {
+    let regionRequests : EditRequest[] = [];
+    (await firestore.collection("editRequests").where("regionId", "==", regionId).get()).docs.forEach(
+      (req) => {
+        let converted = this.convertToEditRequest(req.id, req.data());
+        if (!!converted) {
+          regionRequests.push(converted);
+        }
+      }
+    );
+    return regionRequests;
+  }
+
+  async getAllEditRequests(): Promise<EditRequest[]> {
+    let allRequests: EditRequest[] = [];
+    (await firestore.collection("editRequests").get()).docs.forEach(
+      (req) => {
+        let converted = this.convertToEditRequest(req.id, req.data());
+        if (!!converted) {
+          allRequests.push(converted);
+        }
+      }
+    );
+    return allRequests;
+  }
+
+  async getEditRequestById(id: string) : Promise<EditRequest | null> {
+    firestore.collection("editRequests").doc(id);
+    return this.convertToEditRequest(id, (await firestore.collection("editRequests").doc(id).get()).data());
+  }
+
+  convertToEditRequest(id: string, documentData: firebase.firestore.DocumentData | undefined) : EditRequest | null {
+    if(!!documentData) {
+      let request = <EditRequest>documentData;
+      request.dateSubmitted = (<Timestamp>(documentData.dateSubmitted)).toDate();
+      request.dateUpdated = (<Timestamp>(documentData.dateUpdated)).toDate();
+      request.id = id;
+      return request;
+    } else {
+      return null;
+    }
+  }
+
+
   private async updateRegionFilters(regionId: string, filterUpdate: RegionFilters, transaction: firebase.firestore.Transaction) {
     let regionRef = firestore.collection("regions").doc(regionId);
     let regionDoc = await transaction.get(regionRef);
@@ -205,6 +235,7 @@ export class ProductionDataLayer implements DataLayer {
       return {};
     }
   }
+
 }
 
 export const productionDataLayer = new ProductionDataLayer();

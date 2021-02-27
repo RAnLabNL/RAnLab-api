@@ -2,15 +2,15 @@ import createRegionsEndpoint from "../src/endpoints/regions";
 import {
   testify,
   setupAuth0TestEnv
-} from "./utils/testify";
-import {DummyDatalayer} from "./utils/testDataLayer";
+} from "./testUtils/testify";
+import {DummyDatalayer} from "./testUtils/testDataLayer";
 import {
   dummyAdminToken,
   DummyRegion,
   dummyRegionManagerToken,
   getRegionsByDummyManager,
   dummyTokenVerifier
-} from "./utils/dummyData";
+} from "./testUtils/dummyData";
 import {Region} from "../src/database/productionDataLayer";
 import {FastifyInstance} from "fastify";
 

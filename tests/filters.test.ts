@@ -1,6 +1,6 @@
 import {createFiltersEndpoint} from "../src/endpoints/filters";
 import {Business, createBusinessesEndpoint} from "../src/endpoints/businesses";
-import {DummyDatalayer} from "./utils/testDataLayer";
+import {DummyDatalayer} from "./testUtils/testDataLayer";
 import {
   createDummyBusiness,
   createDummyRegion, dummyAdminToken,
@@ -8,9 +8,9 @@ import {
   DummyRegion,
   dummyRegionManagerToken,
   dummyTokenVerifier
-} from "./utils/dummyData";
+} from "./testUtils/dummyData";
 import createRegionsEndpoint from "../src/endpoints/regions";
-import {setupAuth0TestEnv, testify} from "./utils/testify";
+import {setupAuth0TestEnv, testify} from "./testUtils/testify";
 
 describe("Filter Endpoint Tests", () => {
   let testDataLayer: DummyDatalayer;

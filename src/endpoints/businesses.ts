@@ -5,15 +5,7 @@ import GeoPoint = firebase.firestore.GeoPoint;
 import {createBizSchema, getBizSchema, updateBizSchema} from "./docs/businessesSchemas";
 import {isRegionManager} from "../utils";
 import {Auth0JwtVerifier} from "../auth0";
-
-interface GetRegionBusinessRequest extends RequestGenericInterface {
-  Params: {
-    regionId: string
-  },
-  Headers: {
-    access_token: string
-  }
-}
+import {AuthenticatedRequestByRegionId} from "./endpointUtils";
 
 interface CreateBusinessRequest extends RequestGenericInterface {
   Params: {
@@ -41,7 +33,7 @@ export interface Business {
 
 export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
 
-  app.get<GetRegionBusinessRequest>(
+  app.get<AuthenticatedRequestByRegionId>(
     '/regions/:regionId/businesses',
     {schema: getBizSchema},
     async (request, reply) => {

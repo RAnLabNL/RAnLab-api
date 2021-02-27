@@ -1,6 +1,6 @@
 import {registerCorsHandler} from "../src/cors";
-import { testify} from "./utils/testify";
-import {DummyRegion} from "./utils/dummyData";
+import { testify} from "./testUtils/testify";
+import {DummyRegion} from "./testUtils/dummyData";
 
 
 describe('CORS Handler Tests', function () {

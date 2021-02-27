@@ -1,12 +1,12 @@
 import fastify, {FastifyInstance} from "fastify";
 import {addRoutes} from "../src/utils";
 import createRegionsEndpoint from "../src/endpoints/regions";
-import {DummyDatalayer} from "./utils/testDataLayer";
+import {DummyDatalayer} from "./testUtils/testDataLayer";
 import fetch from "node-fetch";
 import {createBusinessesEndpoint} from "../src/endpoints/businesses";
 import fastifySensible from "fastify-sensible";
-import { setupAuth0TestEnv} from "./utils/testify";
-import {DummyRegion} from "./utils/dummyData";
+import { setupAuth0TestEnv} from "./testUtils/testify";
+import {DummyRegion} from "./testUtils/dummyData";
 import {DataLayer} from "../src/database/productionDataLayer";
 import {getUserInfo, verifyJwt} from "../src/auth0";
 

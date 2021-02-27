@@ -2,8 +2,14 @@ import {productionDataLayer, Region} from "../src/database/productionDataLayer";
 import {firestore} from "../src/database/firestore";
 import {Business} from "../src/endpoints/businesses";
 import objectContaining = jasmine.objectContaining;
+import {EditRequest} from "../src/endpoints/editRequest";
+import arrayContaining = jasmine.arrayContaining;
+import {DummyBiz} from "./testUtils/dummyData";
 
 describe("Production Data Layer Integration Tests", () => {
+  const DUMMY_REGION_1 = "DummyRegion";
+  const DUMMY_REGION_2 = "DummyRegion2";
+
   async function deleteRegionsNamed(regionName: string) {
     (await firestore.collection("regions").where("name", "==", regionName).get()).docs
       .forEach((doc) => doc.ref.delete());
@@ -12,8 +18,10 @@ describe("Production Data Layer Integration Tests", () => {
   beforeEach(async(done) => {
     (await firestore.collection("businesses").where("name", "==", "DummyBiz").get()).docs.forEach((d) => d.ref.delete());
     await firestore.collection("years").doc("2019").delete();
-    await deleteRegionsNamed("DummyRegion");
-    await deleteRegionsNamed("DummyRegion2");
+    (await firestore.collection("editRequests").get()).docs.forEach(req => req.ref.delete());
+    await deleteRegionsNamed(DUMMY_REGION_1);
+    await deleteRegionsNamed(DUMMY_REGION_2);
+
     done();
   });
 
@@ -25,7 +33,7 @@ describe("Production Data Layer Integration Tests", () => {
       industry: "DummyIndustry",
       year_added: 2019
     };
-    biz.regionId = (await productionDataLayer.setRegion({name: "DummyRegion", manager: "Dummy"})).id;
+    biz.regionId = (await productionDataLayer.setRegion({name: DUMMY_REGION_1, manager: "Dummy"})).id;
 
     let id = (await productionDataLayer.setBusiness(biz)).id;
     expect(id).toBeTruthy();
@@ -60,7 +68,7 @@ describe("Production Data Layer Integration Tests", () => {
 
   it("Creates, retrieves, updates, and deletes regions", async (done) => {
     let region: Region = {
-      name: "DummyRegion",
+      name: DUMMY_REGION_1,
       manager: "Dummy Manager"
     };
 
@@ -83,7 +91,7 @@ describe("Production Data Layer Integration Tests", () => {
     expect(newManagerRegions).toEqual(expect.arrayContaining([region]));
 
     let region2: Region = {
-      name: "DummyRegion2",
+      name: DUMMY_REGION_2,
       manager: "Manager2"
     };
     region2.id = (await productionDataLayer.setRegion(region2)).id;
@@ -99,4 +107,61 @@ describe("Production Data Layer Integration Tests", () => {
     done();
   });
 
+  it("Creates, retrieves, and updates edit requests", async(done) => {
+    let region: Region = {
+      name: DUMMY_REGION_1,
+      manager: "Dummy Manager"
+    };
+    let regionId : string;
+    regionId = (await productionDataLayer.setRegion(region)).id;
+
+    let testRequest : EditRequest = {
+      regionId: regionId,
+      submitter: "",
+      dateSubmitted: new Date(),
+      dateUpdated: new Date(),
+      status: "",
+      adds:[DummyBiz],
+      updates: [DummyBiz],
+      deletes: [],
+    };
+
+    let spoilerRequest : EditRequest = {
+      regionId: `Not${regionId}`,
+      submitter: "",
+      dateSubmitted: new Date(),
+      dateUpdated: new Date(),
+      status: "",
+      adds:[DummyBiz],
+      updates: [DummyBiz],
+      deletes: [],
+    };
+
+    let {id} = await productionDataLayer.createEditRequest(testRequest);
+    expect(id).toBeTruthy();
+    testRequest.id = id;
+
+    let {id:spoilerId} = await productionDataLayer.createEditRequest(spoilerRequest);
+    expect(spoilerId).toBeTruthy();
+    spoilerRequest.id = spoilerId;
+
+    let editRequests = await productionDataLayer.getEditRequestsForRegion(regionId);
+    expect(editRequests).toBeTruthy();
+    expect(editRequests.length).toBe(1);
+    expect(editRequests).toStrictEqual(arrayContaining([testRequest]));
+
+    editRequests = await productionDataLayer.getAllEditRequests();
+    expect(editRequests).toBeTruthy();
+    expect(editRequests.length).toBe(2);
+    expect(editRequests).toStrictEqual(arrayContaining([testRequest, spoilerRequest]))
+
+    let singleRequest = await productionDataLayer.getEditRequestById(id);
+    expect(singleRequest).toBeTruthy();
+    if(!!singleRequest) {
+      expect(singleRequest).toStrictEqual(testRequest);
+      expect(singleRequest.regionId).toBe(regionId);
+    }
+
+    done();
+  });
 });
