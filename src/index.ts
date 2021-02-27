@@ -9,6 +9,7 @@ import {createFiltersEndpoint} from "./endpoints/filters";
 import {registerCorsHandler} from "./cors";
 import {registerSwagger} from "./swagger";
 import {verifyJwt} from "./auth0";
+import {createEditEndpoint} from "./endpoints/editRequest";
 
 const port = Number(process.env.PORT || 8080);
 const server = fastify();
@@ -20,7 +21,8 @@ addRoutes(
   createPingEndpoint,
   (app: FastifyInstance) => createFiltersEndpoint(app, productionDataLayer, verifyJwt),
   (app: FastifyInstance) => createRegionsEndpoint(app, productionDataLayer, verifyJwt),
-  (app: FastifyInstance) => createBusinessesEndpoint(app, productionDataLayer, verifyJwt)
+  (app: FastifyInstance) => createBusinessesEndpoint(app, productionDataLayer, verifyJwt),
+  (app: FastifyInstance) => createEditEndpoint(app, productionDataLayer, verifyJwt)
 );
 
 server.listen(port, '::', (err, address) => {
