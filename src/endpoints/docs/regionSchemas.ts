@@ -1,10 +1,15 @@
 import {filtersSchema} from "./filterSchemas";
 import {byRegionIdSchema} from "./basicSchemas";
 
+const managerIdSchema = {
+  type: 'string',
+  description: "The second half of the auth0 sub claim. For example, for a user with {sub: 'auth0|123456'}, their manager ID is '123456'"
+};
+
 const byManagerIdSchema = {
   type: 'object',
   properties: {
-    managerId: {type: 'string'}
+    managerId: managerIdSchema
   }
 };
 
@@ -13,7 +18,7 @@ const getRegionSchema = {
   properties: {
     id: {type: "string"},
     name: {type: "string"},
-    manager: {type: "string"},
+    manager: managerIdSchema,
     filters: filtersSchema
   }
 };
@@ -22,7 +27,7 @@ const createRegionSchema = {
   type: 'object',
   properties: {
     name: {type: "string"},
-    manager: {type: "string"}
+    manager: managerIdSchema
   }
 };
 
@@ -33,7 +38,7 @@ const updateRegionSchema = {
     nullable: true
   },
   name: {type: "string"},
-  manager: {type: "string"}
+  manager: managerIdSchema
 }
 
 
@@ -52,7 +57,6 @@ export const getManagedRegionsReqSchema = {
           type: 'array',
           items: getRegionSchema
         }
-
       }
     }
   }

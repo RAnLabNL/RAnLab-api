@@ -126,7 +126,8 @@ describe("Auth0 integration tests", () => {
         grant_type: "password"
       })
     });
-    userAccessToken = (await userResponse.json()).access_token;
+    let userJson = await userResponse.json()
+    userAccessToken = userJson.access_token;
     let adminResponse = await fetch(`https://${process.env.AUTH0_DOMAIN}/oauth/token`, {
       method: "POST",
       headers: {'content-type': 'application/json'},
