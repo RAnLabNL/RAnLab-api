@@ -36,6 +36,7 @@ export interface DataLayer {
   createEditRequest(add: EditRequest): Promise<IdObject>;
   getEditRequestsForRegion(regionId: string): Promise<EditRequest[]>;
   getAllEditRequests(): Promise<EditRequest[]>;
+  getEditRequestById(id: string): Promise<EditRequest | null>;
 }
 
 export class ProductionDataLayer implements DataLayer {

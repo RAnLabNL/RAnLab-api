@@ -9,8 +9,11 @@ export interface AuthenticatedRequest extends RequestGenericInterface {
 export interface AuthenticatedRequestByRegionId extends AuthenticatedRequest {
   Params: {
     regionId: string
-  },
-  Headers: {
-    access_token: string
+  }
+}
+
+export interface AuthenticatedRequestById extends AuthenticatedRequest {
+  Params: {
+    id: string
   }
 }

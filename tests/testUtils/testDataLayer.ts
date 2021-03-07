@@ -69,9 +69,12 @@ export class DummyDatalayer implements DataLayer {
     return this.editRequests;
   }
 
+  async getEditRequestById(id: string): Promise<EditRequest | null> {
+    return this.editRequests.filter((req) => req.id === id)[0];
+  }
+
   clearRegions() {
     this.regions = [];
   }
-
 
 }

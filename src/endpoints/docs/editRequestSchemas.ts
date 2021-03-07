@@ -1,4 +1,4 @@
-import {byRegionIdSchema} from "./basicSchemas";
+import {byIdSchema, byRegionIdSchema} from "./basicSchemas";
 import { businessSchema} from "./businessesSchemas";
 
  const editRequestSchema = {
@@ -27,6 +27,20 @@ import { businessSchema} from "./businessesSchemas";
     }
   }
 }
+
+export const getEditRequestByIdSchema = {
+  params: byIdSchema,
+  response: {
+    200: {
+      description: 'Successful response',
+      type: 'object',
+      properties: {
+        status: {type: 'string'},
+        editRequest: editRequestSchema
+      }
+    }
+  }
+};
 
 export const getEditRequestsByRegionSchema = {
   params: byRegionIdSchema,

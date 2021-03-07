@@ -31,7 +31,7 @@ export function getTestJwtVerifier(userAppId: string, admin: boolean) {
 }
 
 export const testify = () => {
-  const f = fastify();
+  const f = fastify({logger: {level: "debug"}});
   f.register(fastifyJWT, <FastifyJWTOptions>{
     secret: (_request, _reply, _provider) => { _provider(null, mockSecret);},
     audience: 'https://localhost',

@@ -12,7 +12,7 @@ import {verifyJwt} from "./auth0";
 import {createEditEndpoint} from "./endpoints/editRequest";
 
 const port = Number(process.env.PORT || 8080);
-const server = fastify();
+const server = fastify({logger: true});
 server.register(fastifySensible);
 registerSwagger(server);
 registerCorsHandler(server);

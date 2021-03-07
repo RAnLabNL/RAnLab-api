@@ -2,7 +2,7 @@ import {FastifyInstance } from "fastify";
 import {DataLayer} from "../database/productionDataLayer";
 import {Business} from "./businesses";
 import {Auth0JwtVerifier} from "../auth0";
-import {AuthenticatedRequest, AuthenticatedRequestByRegionId} from "./endpointUtils";
+import {AuthenticatedRequest, AuthenticatedRequestById, AuthenticatedRequestByRegionId} from "./endpointUtils";
 import {isRegionManager} from "../utils";
 import {
   createEditRequestSchema,
@@ -27,6 +27,25 @@ interface CreateEditRequest extends AuthenticatedRequestByRegionId {
 }
 
 export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
+  app.get<AuthenticatedRequestById>(
+    `/edits/:id`,
+    {schema: getEditRequestsByRegionSchema},
+    async (request, reply) => {
+      let {userAppId, admin} = await verifyJwt(request);
+      if(!admin && !userAppId) {
+        reply.unauthorized("Must be logged in to submit requests");
+        return;
+      } else {
+        let response = {
+          status: "ok",
+          editRequest: <EditRequest | null>null
+        }
+        response.editRequest = await dataLayer.getEditRequestById(request.params.id)
+        return JSON.stringify(response);
+      }
+    }
+  );
+
   app.get<AuthenticatedRequestByRegionId>(
     `/region/:regionId/edits`,
     {schema: getEditRequestsByRegionSchema},

@@ -66,25 +66,29 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
     '/regions/:regionId',
     {schema: getSingleRegionReqSchema},
     async(request, reply ) => {
-
-      let {userAppId, admin} = await verifyJwt(request);
-      let response = {
-        status: "ok",
-        date: Date.now(),
-        region: <Region | null>null
-      }
-      let regions : Region[] ;
-      if(admin) {
-        regions = (await dataLayer.getAllRegions());
-      } else if (!userAppId) {
-        reply.unauthorized();
+      try {
+        let {userAppId, admin} = await verifyJwt(request);
+        let response = {
+          status: "ok",
+          date: Date.now(),
+          region: <Region | null>null
+        }
+        let regions: Region[];
+        if (admin) {
+          regions = (await dataLayer.getAllRegions());
+        } else if (!userAppId) {
+          reply.unauthorized();
+          return;
+        } else {
+          regions = (await dataLayer.getRegionsManagedBy(userAppId));
+        }
+        let region: Region | undefined = regions.find((r => r.name == request.params.regionId))
+        response.region = !!region ? region : null;
+        return JSON.stringify(response);
+      } catch (e) {
+        reply.badRequest(`Error during request: ${JSON.stringify(e)}`);
         return;
-      } else {
-        regions = (await dataLayer.getRegionsManagedBy(userAppId));
       }
-      let region: Region | undefined = regions.find((r => r.name == request.params.regionId))
-      response.region = !!region ? region : null;
-      return JSON.stringify(response);
     }
   );
 

@@ -21,7 +21,7 @@ export const DummyBiz: Business = {
 };
 
 export async function dummyTokenVerifier (req: FastifyRequest) {
-  if(!req.headers.authorization) {
+  if(!req.headers.authorization || !req.headers.authorization.split("Bearer")[1].trim()) {
     return {userAppId: "", admin: false};
   }
   if(req.headers.authorization.indexOf(dummyAdminToken) > 0) {
