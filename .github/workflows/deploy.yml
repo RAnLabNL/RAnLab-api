@@ -4,6 +4,7 @@ on:
     types: [published]
 jobs:
   build:
+    environment: "GC Run"
     name: Build image
     runs-on: ubuntu-latest
     env:
@@ -13,6 +14,10 @@ jobs:
       PROJECT_ID: ${{ secrets.PROJECT_ID }}
       AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
       AUTH0_MGMT_CLIENT_SECRET: ${{ secrets.AUTH0_MGMT_CLIENT_SECRET }}
+      AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+      AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+      AUTH0_MGMT_CLIENT_ID: ${{ secrets.AUTH0_MGMT_CLIENT_ID }}
+      AUTH0_CLAIMS_NAMESPACE: ${{ secrets.AUTH0_CLAIMS_NAMESPACE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -44,4 +49,4 @@ jobs:
             --region=northamerica-northeast1 \
             --allow-unauthenticated \
             --image northamerica-northeast1-docker.pkg.dev/ranlab-mvp-295423/ranlab-api-mvp/ranlab-api-mvp:latest \
-            --set-env-vars AUTH0_MGMT_CLIENT_SECRET=$AUTH0_MGMT_CLIENT_SECRET,AUTH0_CLIENT_SECRET=$AUTH0_CLIENT_SECRET
+            --set-env-vars AUTH0_MGMT_CLIENT_SECRET=$AUTH0_MGMT_CLIENT_SECRET,AUTH0_CLIENT_SECRET=$AUTH0_CLIENT_SECRET,AUTH0_DOMAIN=$AUTH0_DOMAIN,AUTH0_CLIENT_ID=$AUTH0_CLIENT_ID,AUTH0_MGMT_CLIENT_ID=$AUTH0_MGMT_CLIENT_ID,AUTH0_CLAIMS_NAMESPACE=$AUTH0_CLAIMS_NAMESPACE
