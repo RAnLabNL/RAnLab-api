@@ -74,8 +74,8 @@ export const getEditRequestsByRegionSchema = {
   }
 };
 
-export const getAllEditRequestsSchema = {
-  description:  "Returns all edit requests. Only usable by system admins",
+export const getPendingEditRequestsSchema = {
+  description:  "Returns all pending edit requests. Only usable by system admins",
   response: {
     200: {
       description: 'Successful response',
@@ -90,6 +90,25 @@ export const getAllEditRequestsSchema = {
     }
   }
 };
+
+export const getReviewedEditRequestsSchema = {
+  description:  "Returns all reviewed edit requests. Only usable by system admins",
+  response: {
+    200: {
+      description: 'Successful response',
+      type: 'object',
+      properties: {
+        status: {type: 'string'},
+        editRequests: {
+          type: "array",
+          items: editRequestSchema
+        }
+      }
+    }
+  }
+};
+
+
 
 export const createEditRequestSchema = {
   description:  "Creates the supplied edit request",

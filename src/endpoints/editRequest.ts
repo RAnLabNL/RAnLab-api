@@ -6,8 +6,8 @@ import {AuthenticatedRequest, AuthenticatedRequestById, AuthenticatedRequestByRe
 import {isRegionManager} from "../utils";
 import {
   createEditRequestSchema,
-  getAllEditRequestsSchema, getEditRequestByIdSchema,
-  getEditRequestsByRegionSchema, updateEditRequestSchema
+  getEditRequestByIdSchema,
+  getEditRequestsByRegionSchema, getPendingEditRequestsSchema, getReviewedEditRequestsSchema, updateEditRequestSchema
 } from "./docs/editRequestSchemas";
 
 export const URL_PENDING_EDIT_REQUESTS = "/edits/status/pending";
@@ -93,7 +93,7 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
 
   app.get<AuthenticatedRequest>(
     URL_PENDING_EDIT_REQUESTS,
-    {schema: getAllEditRequestsSchema},
+    {schema: getPendingEditRequestsSchema},
     async (request, reply) => {
       let { admin } = await verifyJwt(request);
       if(!admin) {
@@ -111,7 +111,7 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
 
   app.get<AuthenticatedRequest>(
     URL_REVIEWED_EDIT_REQUESTS,
-    {schema: getAllEditRequestsSchema},
+    {schema: getReviewedEditRequestsSchema},
     async (request, reply) => {
       let { admin } = await verifyJwt(request);
       if(!admin) {
