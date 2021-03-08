@@ -42,6 +42,21 @@ export const getEditRequestByIdSchema = {
   }
 };
 
+export const updateEditRequestSchema = {
+  params: byIdSchema,
+  response: {
+    200: {
+      description: 'Successful response',
+      type: 'object',
+      properties: {
+        status: {type: 'string'},
+        editRequest: editRequestSchema
+      }
+    }
+  }
+}
+
+
 export const getEditRequestsByRegionSchema = {
   params: byRegionIdSchema,
   response: {

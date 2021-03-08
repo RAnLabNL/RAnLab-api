@@ -10,6 +10,7 @@ import {
 } from "./testUtils/dummyData";
 import arrayContaining = jasmine.arrayContaining;
 import {FastifyInstance} from "fastify";
+import objectContaining = jasmine.objectContaining;
 
 const DummyAdd : EditRequest = {
   regionId: DummyRegion.name,
@@ -36,10 +37,7 @@ describe("Edit Request unit tests", () => {
     const postResponse = await submitEditRequest(DummyAdd, DummyRegion.name, "");
     expect(postResponse.statusCode).toBe(401);
 
-    const getResponse = await editEndpoint.inject({
-      method: "GET",
-      url: `/region/${DummyRegion.name}/edits`
-    })
+    const getResponse = await getEditRequestsByRegion(DummyRegion.name, "");
     expect(getResponse.statusCode).toBe(401);
 
     await testApp.close();
@@ -47,14 +45,6 @@ describe("Edit Request unit tests", () => {
   });
 
   it("Can view a single edit request by request id as region or system admin", async(done) => {
-    async function getRequestById(requestId: string, token: string) : Promise<any> {
-      return await editEndpoint.inject({
-        method: "GET",
-        url: `/edits/${requestId}`,
-        headers: {authorization: `Bearer ${token}`}
-      });
-    }
-
     const postResponse = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
     expect(postResponse.statusCode).toBe(201);
     const responseData = JSON.parse(postResponse.payload);
@@ -62,7 +52,7 @@ describe("Edit Request unit tests", () => {
 
     const regionManagerResponse = await getRequestById(responseData.id, dummyRegionManagerToken);
     expect(regionManagerResponse.statusCode).toBe(200);
-    const postedEdit = asResponse({...DummyAdd, id: responseData.id});
+    const postedEdit = asResponse(asInitializedEditRequest(DummyAdd, responseData.id));
     expect(JSON.parse(regionManagerResponse.payload).editRequest).toStrictEqual(postedEdit);
 
     const adminResponse = await getRequestById(responseData.id, dummyAdminToken);
@@ -80,10 +70,10 @@ describe("Edit Request unit tests", () => {
       const responseData = JSON.parse(postResponse.payload);
       expect(responseData).toStrictEqual(expect.objectContaining({ id: responseData.id}));
 
-      const postedEdit : EditRequest = {...DummyAdd, id: responseData.id};
+      const postedEdit = asResponse(asInitializedEditRequest(DummyAdd, responseData.id));
       const getResponse = await getEditRequestsByRegion(DummyRegion.name, dummyRegionManagerToken)
       expect(getResponse.statusCode).toBe(200);
-      expect(JSON.parse(getResponse.payload).editRequests).toStrictEqual(arrayContaining([asResponse(postedEdit)]));
+      expect(JSON.parse(getResponse.payload).editRequests).toStrictEqual(arrayContaining([postedEdit]));
 
       await testApp.close();
       done();
@@ -94,11 +84,11 @@ describe("Edit Request unit tests", () => {
       expect(postResponse.statusCode).toBe(201);
       const responseData = JSON.parse(postResponse.payload);
       expect(responseData).toStrictEqual(expect.objectContaining({ id: responseData.id}));
-      const postedEdit = {...DummyAdd, id: responseData.id};
+      const postedEdit = asResponse(asInitializedEditRequest(DummyAdd,responseData.id));
 
       const getResponse = await getEditRequestsByRegion(DummyRegion.name, dummyAdminToken);
       expect(getResponse.statusCode).toBe(200);
-      expect(JSON.parse(getResponse.payload).editRequests).toStrictEqual(arrayContaining([asResponse(postedEdit)]));
+      expect(JSON.parse(getResponse.payload).editRequests).toStrictEqual(arrayContaining([postedEdit]));
 
       await testApp.close();
       done();
@@ -106,14 +96,20 @@ describe("Edit Request unit tests", () => {
   });
 
   it("Can view all edit requests as a system admin but not as region manager", async(done) => {
+    function getAllEditRequests(token: string) {
+      return editEndpoint.inject({
+        method: "GET",
+        url: `/edits/all`,
+        headers: {authorization: `Bearer ${token}`}
+      });
+    }
+
     const postResponse1 = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
     expect(postResponse1.statusCode).toBe(201);
-    let postedRequest1 = {...DummyAdd, id: JSON.parse(postResponse1.payload).id}
 
     const differentRegionAdd =  {...DummyAdd, regionId: `Not${DummyRegion.name}`};
     const postResponse2 = await submitEditRequest(differentRegionAdd, differentRegionAdd.regionId, dummyRegionManagerToken);
     expect(postResponse2.statusCode).toBe(201);
-    let postedRequest2 = {...differentRegionAdd, id: JSON.parse(postResponse2.payload).id}
 
     const regionManagerResponse = await editEndpoint.inject({
       method: "GET",
@@ -125,20 +121,65 @@ describe("Edit Request unit tests", () => {
     const byRegionResponse = await getEditRequestsByRegion(DummyRegion.name, dummyRegionManagerToken);
     expect(JSON.parse(byRegionResponse.payload).editRequests.length).toBe(1);
 
-    const getResponse = await editEndpoint.inject({
-      method: "GET",
-      url: `/edits/all`,
-      headers: {authorization: `Bearer ${dummyAdminToken}`}
-    });
+    const getResponse = await getAllEditRequests(dummyAdminToken);
     expect(getResponse.statusCode).toBe(200);
+    let postedRequest1 = asResponse(asInitializedEditRequest(DummyAdd, JSON.parse(postResponse1.payload).id));
+    let postedRequest2 = asResponse(asInitializedEditRequest(differentRegionAdd,  JSON.parse(postResponse2.payload).id));
     expect(JSON.parse(getResponse.payload).editRequests).toStrictEqual(arrayContaining([
-      asResponse(postedRequest1),
-      asResponse(postedRequest2)
+      postedRequest1,
+      postedRequest2
     ]));
 
     await testApp.close();
     done();
   });
+
+  it("Can only update edit request status as sysadmin", async(done) => {
+    async function updateEditRequestStatus(editRequest: EditRequest, newStatus: string, token: string) : Promise<any> {
+      return testApp.inject({
+        method: "POST",
+        url: `/edits/${editRequest.id}`,
+        payload: {...editRequest, status: newStatus},
+        headers: {
+          authorization: `Bearer ${token}`
+        }
+      });
+    }
+
+    const submitResponse = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
+    expect(submitResponse.statusCode).toBe(201);
+    let createdRequest = {...DummyAdd, id: JSON.parse(submitResponse.payload).id};
+
+    const unauthorizedResponse = await updateEditRequestStatus(createdRequest, "Approved", "");
+    expect(unauthorizedResponse.statusCode).toBe(401);
+
+    const regionManagerResponse = await updateEditRequestStatus(createdRequest, "Approved", dummyRegionManagerToken);
+    expect(regionManagerResponse.statusCode).toBe(401);
+
+    const updateResponse = await updateEditRequestStatus(createdRequest, "Approved", dummyAdminToken);
+    expect(updateResponse.statusCode).toBe(200);
+
+    const updatedRequest = asResponse({
+      ...createdRequest,
+      status: "Approved"
+    });
+    expect(JSON.parse(updateResponse.payload).editRequest).toStrictEqual(objectContaining(updatedRequest));
+
+    const postUpdateRead = await getRequestById(createdRequest.id, dummyRegionManagerToken);
+    expect(postUpdateRead.statusCode).toBe(200);
+    expect(JSON.parse(postUpdateRead.payload).editRequest).toStrictEqual(objectContaining(updatedRequest));
+
+    await testApp.close();
+    done();
+  });
+
+  async function getRequestById(requestId: string, token: string) : Promise<any> {
+    return await editEndpoint.inject({
+      method: "GET",
+      url: `/edits/${requestId}`,
+      headers: {authorization: `Bearer ${token}`}
+    });
+  }
 
   async function submitEditRequest(request: EditRequest, regionId: string, token: string) {
     let postOptions = {
@@ -161,12 +202,16 @@ describe("Edit Request unit tests", () => {
     });
   }
 
-/**
+  /**
    * Simulates the standard data conversion when data is submitted in a request and then received in a response
    * @param rawEdit - the edit data in its original pre-submission
    * @return - the same data, but having been stringified and then parsed again. This has implicates for, for example, Date strings
    */
   function asResponse(rawEdit: EditRequest) : EditRequest {
     return JSON.parse(JSON.stringify(rawEdit));
+  }
+
+  function asInitializedEditRequest(rawEdit: EditRequest, id: string) : EditRequest {
+    return {...rawEdit, id, status: "In Progress"};
   }
 });

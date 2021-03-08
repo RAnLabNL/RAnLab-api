@@ -6,8 +6,8 @@ import {AuthenticatedRequest, AuthenticatedRequestById, AuthenticatedRequestByRe
 import {isRegionManager} from "../utils";
 import {
   createEditRequestSchema,
-  getAllEditRequestsSchema,
-  getEditRequestsByRegionSchema
+  getAllEditRequestsSchema, getEditRequestByIdSchema,
+  getEditRequestsByRegionSchema, updateEditRequestSchema
 } from "./docs/editRequestSchemas";
 
 export interface EditRequest {
@@ -16,7 +16,7 @@ export interface EditRequest {
   submitter: string,
   dateSubmitted: Date | string,
   dateUpdated: Date | string
-  status: string,
+  status?: string,
   adds?: Business[],
   updates?: Business[] | undefined,
   deletes?: string[] | undefined
@@ -26,10 +26,14 @@ interface CreateEditRequest extends AuthenticatedRequestByRegionId {
   Body: EditRequest
 }
 
+interface UpdateEditRequest extends AuthenticatedRequestById {
+  Body: EditRequest
+}
+
 export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
   app.get<AuthenticatedRequestById>(
     `/edits/:id`,
-    {schema: getEditRequestsByRegionSchema},
+    {schema: getEditRequestByIdSchema},
     async (request, reply) => {
       let {userAppId, admin} = await verifyJwt(request);
       if(!admin && !userAppId) {
@@ -42,6 +46,25 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
         }
         response.editRequest = await dataLayer.getEditRequestById(request.params.id)
         return JSON.stringify(response);
+      }
+    }
+  );
+  app.post<UpdateEditRequest>(
+    `/edits/:id`,
+    {schema: updateEditRequestSchema},
+    async(request, reply) => {
+      let {userAppId, admin} = await verifyJwt(request);
+      if(!admin && !!request.body.status) {
+        reply.unauthorized("Only system administrators may update edit request statuses!");
+        return;
+      } else if (!admin && !(await isRegionManager(userAppId, request.body.regionId, dataLayer))) {
+        reply.unauthorized("Only administrators and managers may update edit requests!");
+        return;
+      } else {
+        return {
+          status: "ok",
+          editRequest: await dataLayer.updateEditRequest(request.body)
+        };
       }
     }
   );
@@ -93,6 +116,7 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
         return;
       } else {
         const incomingRequest = request.body;
+        incomingRequest.status = "In Progress";
         let response = {
           status: "ok",
           id: (await dataLayer.createEditRequest(incomingRequest)).id

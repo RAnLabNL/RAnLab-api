@@ -37,6 +37,7 @@ export interface DataLayer {
   getEditRequestsForRegion(regionId: string): Promise<EditRequest[]>;
   getAllEditRequests(): Promise<EditRequest[]>;
   getEditRequestById(id: string): Promise<EditRequest | null>;
+  updateEditRequest(body: EditRequest): Promise<EditRequest>;
 }
 
 export class ProductionDataLayer implements DataLayer {
@@ -160,8 +161,16 @@ export class ProductionDataLayer implements DataLayer {
   }
 
   async getEditRequestById(id: string) : Promise<EditRequest | null> {
-    firestore.collection("editRequests").doc(id);
-    return this.convertToEditRequest(id, (await firestore.collection("editRequests").doc(id).get()).data());
+    let requestData = (await firestore.collection("editRequests").doc(id).get()).data();
+    return this.convertToEditRequest(id, requestData);
+  }
+
+  async updateEditRequest(body: EditRequest): Promise<EditRequest> {
+    let id = !!body.id ? body.id : "";
+    let requestData = await this.getEditRequestById(id);
+    let updatedRequestData = {...requestData, ...body};
+    await firestore.collection("editRequests").doc(id).set(updatedRequestData)
+    return Promise.resolve(updatedRequestData);
   }
 
   convertToEditRequest(id: string, documentData: firebase.firestore.DocumentData | undefined) : EditRequest | null {
@@ -236,7 +245,6 @@ export class ProductionDataLayer implements DataLayer {
       return {};
     }
   }
-
 }
 
 export const productionDataLayer = new ProductionDataLayer();

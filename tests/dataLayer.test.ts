@@ -9,6 +9,7 @@ import {DummyBiz} from "./testUtils/dummyData";
 describe("Production Data Layer Integration Tests", () => {
   const DUMMY_REGION_1 = "DummyRegion";
   const DUMMY_REGION_2 = "DummyRegion2";
+  let regionId : string;
 
   async function deleteRegionsNamed(regionName: string) {
     (await firestore.collection("regions").where("name", "==", regionName).get()).docs
@@ -112,7 +113,6 @@ describe("Production Data Layer Integration Tests", () => {
       name: DUMMY_REGION_1,
       manager: "Dummy Manager"
     };
-    let regionId : string;
     regionId = (await productionDataLayer.setRegion(region)).id;
 
     let testRequest : EditRequest = {
@@ -120,7 +120,7 @@ describe("Production Data Layer Integration Tests", () => {
       submitter: "",
       dateSubmitted: new Date(),
       dateUpdated: new Date(),
-      status: "",
+      status: "In Progress",
       adds:[DummyBiz],
       updates: [DummyBiz],
       deletes: [],
@@ -131,7 +131,7 @@ describe("Production Data Layer Integration Tests", () => {
       submitter: "",
       dateSubmitted: new Date(),
       dateUpdated: new Date(),
-      status: "",
+      status: "In Progress",
       adds:[DummyBiz],
       updates: [DummyBiz],
       deletes: [],
@@ -161,6 +161,32 @@ describe("Production Data Layer Integration Tests", () => {
       expect(singleRequest).toStrictEqual(testRequest);
       expect(singleRequest.regionId).toBe(regionId);
     }
+
+    let updateRequest = {
+      id: testRequest.id,
+      status: "Approved",
+      regionId: testRequest.regionId,
+      dateSubmitted: testRequest.dateSubmitted,
+      dateUpdated: new Date(),
+      submitter: testRequest.submitter
+    };
+
+    let requestAfterUpdate = await productionDataLayer.updateEditRequest(updateRequest);
+    expect(requestAfterUpdate).toStrictEqual(
+      objectContaining({
+        ...testRequest,
+        ...updateRequest
+      })
+    );
+
+    let readRequestAfterUpdate = await productionDataLayer.getEditRequestById(testRequest.id);
+    expect(readRequestAfterUpdate).toBeTruthy();
+    expect(readRequestAfterUpdate).toStrictEqual(
+      objectContaining({
+        ...testRequest,
+        ...updateRequest
+      })
+    );
 
     done();
   });
