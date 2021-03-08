@@ -120,7 +120,7 @@ describe("Production Data Layer Integration Tests", () => {
       submitter: "",
       dateSubmitted: new Date(),
       dateUpdated: new Date(),
-      status: "In Progress",
+      status: "Pending",
       adds:[DummyBiz],
       updates: [DummyBiz],
       deletes: [],
@@ -131,7 +131,7 @@ describe("Production Data Layer Integration Tests", () => {
       submitter: "",
       dateSubmitted: new Date(),
       dateUpdated: new Date(),
-      status: "In Progress",
+      status: "Pending",
       adds:[DummyBiz],
       updates: [DummyBiz],
       deletes: [],
@@ -150,11 +150,6 @@ describe("Production Data Layer Integration Tests", () => {
     expect(editRequests.length).toBe(1);
     expect(editRequests).toStrictEqual(arrayContaining([testRequest]));
 
-    editRequests = await productionDataLayer.getAllEditRequests();
-    expect(editRequests).toBeTruthy();
-    expect(editRequests.length).toBe(2);
-    expect(editRequests).toStrictEqual(arrayContaining([testRequest, spoilerRequest]))
-
     let singleRequest = await productionDataLayer.getEditRequestById(id);
     expect(singleRequest).toBeTruthy();
     if(!!singleRequest) {
@@ -162,9 +157,19 @@ describe("Production Data Layer Integration Tests", () => {
       expect(singleRequest.regionId).toBe(regionId);
     }
 
+    editRequests = await productionDataLayer.getAllEditRequests();
+    expect(editRequests).toBeTruthy();
+    expect(editRequests.length).toBe(2);
+    expect(editRequests).toStrictEqual(arrayContaining([testRequest, spoilerRequest]))
+
+    editRequests = await productionDataLayer.getEditRequestsByStatus("Pending");
+    expect(editRequests).toBeTruthy();
+    expect(editRequests.length).toBe(2);
+    expect(editRequests).toStrictEqual(arrayContaining([testRequest, spoilerRequest]))
+
     let updateRequest = {
       id: testRequest.id,
-      status: "Approved",
+      status: "Reviewed",
       regionId: testRequest.regionId,
       dateSubmitted: testRequest.dateSubmitted,
       dateUpdated: new Date(),
@@ -187,6 +192,11 @@ describe("Production Data Layer Integration Tests", () => {
         ...updateRequest
       })
     );
+
+    editRequests = await productionDataLayer.getEditRequestsByStatus("Reviewed");
+    expect(editRequests).toBeTruthy();
+    expect(editRequests.length).toBe(1);
+    expect(editRequests).toStrictEqual(arrayContaining([objectContaining({...testRequest, ...updateRequest, status: "Reviewed"})]))
 
     done();
   });

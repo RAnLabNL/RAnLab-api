@@ -38,6 +38,7 @@ export interface DataLayer {
   getAllEditRequests(): Promise<EditRequest[]>;
   getEditRequestById(id: string): Promise<EditRequest | null>;
   updateEditRequest(body: EditRequest): Promise<EditRequest>;
+  getEditRequestsByStatus(pending: string): Promise<EditRequest[]>;
 }
 
 export class ProductionDataLayer implements DataLayer {
@@ -171,6 +172,19 @@ export class ProductionDataLayer implements DataLayer {
     let updatedRequestData = {...requestData, ...body};
     await firestore.collection("editRequests").doc(id).set(updatedRequestData)
     return Promise.resolve(updatedRequestData);
+  }
+
+  async getEditRequestsByStatus(status: string): Promise<EditRequest[]> {
+    let requests = <EditRequest[]>[];
+    (await firestore.collection("editRequests").where("status", "==", status).get()).docs.forEach(
+      (req) => {
+        let converted = this.convertToEditRequest(req.id, req.data());
+        if (!!converted) {
+          requests.push(converted);
+        }
+      }
+    );
+    return requests;
   }
 
   convertToEditRequest(id: string, documentData: firebase.firestore.DocumentData | undefined) : EditRequest | null {

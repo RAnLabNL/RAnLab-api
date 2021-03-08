@@ -10,6 +10,9 @@ import {
   getEditRequestsByRegionSchema, updateEditRequestSchema
 } from "./docs/editRequestSchemas";
 
+export const URL_PENDING_EDIT_REQUESTS = "/edits/status/pending";
+export const URL_REVIEWED_EDIT_REQUESTS = "/edits/status/reviewed";
+
 export interface EditRequest {
   id?: string,
   regionId: string,
@@ -63,7 +66,7 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
       } else {
         return {
           status: "ok",
-          editRequest: await dataLayer.updateEditRequest(request.body)
+          editRequest: await dataLayer.updateEditRequest({...request.body, id: request.params.id})
         };
       }
     }
@@ -89,7 +92,7 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
   );
 
   app.get<AuthenticatedRequest>(
-    "/edits/all",
+    URL_PENDING_EDIT_REQUESTS,
     {schema: getAllEditRequestsSchema},
     async (request, reply) => {
       let { admin } = await verifyJwt(request);
@@ -99,7 +102,25 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
       } else {
         let response = {
           status: "ok",
-          editRequests: await dataLayer.getAllEditRequests()
+          editRequests: await dataLayer.getEditRequestsByStatus("Pending")
+        }
+        return JSON.stringify(response);
+      }
+    }
+  );
+
+  app.get<AuthenticatedRequest>(
+    URL_REVIEWED_EDIT_REQUESTS,
+    {schema: getAllEditRequestsSchema},
+    async (request, reply) => {
+      let { admin } = await verifyJwt(request);
+      if(!admin) {
+        reply.unauthorized("Only admins may access this data!");
+        return;
+      } else {
+        let response = {
+          status: "ok",
+          editRequests: await dataLayer.getEditRequestsByStatus("Reviewed")
         }
         return JSON.stringify(response);
       }
@@ -116,7 +137,7 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
         return;
       } else {
         const incomingRequest = request.body;
-        incomingRequest.status = "In Progress";
+        incomingRequest.status = "Pending";
         let response = {
           status: "ok",
           id: (await dataLayer.createEditRequest(incomingRequest)).id

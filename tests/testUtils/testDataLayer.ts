@@ -56,7 +56,7 @@ export class DummyDatalayer implements DataLayer {
   }
 
   async createEditRequest(editRequest: EditRequest): Promise<IdObject> {
-    const newRequest = {...editRequest, id: new Date().toISOString()}
+    const newRequest = {...editRequest, id: new Date().toISOString() + Math.random()}
     this.editRequests.push(newRequest);
     return {id: newRequest.id} ;
   }
@@ -79,7 +79,12 @@ export class DummyDatalayer implements DataLayer {
     return this.editRequests[index];
   }
 
+  async getEditRequestsByStatus(status: string): Promise<EditRequest[]> {
+    return this.editRequests.filter((req) => req.status === status);
+  }
+
   clearRegions() {
     this.regions = [];
   }
+
 }
