@@ -27,6 +27,7 @@ export interface Filters {
 
 export interface DataLayer {
   setBusiness(business: Business) : Promise<IdObject>;
+  getBusinessById(id: string): Promise<Business | null>;
   getBusinessesByRegion(region: string): Promise<Business[]>;
   getFilters(regionId: string) : Promise<Filters>;
   getRegionsManagedBy(managerId: string) : Promise<Region[]>;
@@ -42,6 +43,11 @@ export interface DataLayer {
 }
 
 export class ProductionDataLayer implements DataLayer {
+  async getBusinessById(id: string): Promise<Business | null> {
+    let businessSnapshot = await firestore.collection("businesses").doc(id).get();
+    return <Business>{...businessSnapshot.data(), id: businessSnapshot.id};
+  }
+
   async getBusinessesByRegion(regionId: string) : Promise<Business[]> {
     let businessSnapshot = await firestore.collection("businesses").where("regionId", "==", regionId).get();
     return businessSnapshot.docs.map((b) => (<Business>{...b.data(), id: b.id}));

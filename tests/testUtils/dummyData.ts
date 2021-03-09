@@ -1,5 +1,5 @@
 import {FastifyInstance, FastifyRequest} from "fastify";
-import {Business} from "../../src/endpoints/businesses";
+import {Business, BusinessUpdate} from "../../src/endpoints/businesses";
 import {Region} from "../../src/database/productionDataLayer";
 import {getMockToken} from "./testify";
 
@@ -19,6 +19,15 @@ export const DummyBiz: Business = {
   employees: 1,
   industry: "DummyIndustry"
 };
+
+export const DummyBizUpdate: BusinessUpdate = {
+  id: "DummyID",
+  name: "DummyBiz",
+  year_added: 2009,
+  employees: 1,
+  industry: "DummyIndustry"
+};
+
 
 export async function dummyTokenVerifier (req: FastifyRequest) {
   if(!req.headers.authorization || !req.headers.authorization.split("Bearer")[1].trim()) {

@@ -31,6 +31,15 @@ export interface Business {
   location?: GeoPoint | null | undefined
 }
 
+export interface BusinessUpdate {
+  id: string,
+  name?: string,
+  employees?: number,
+  industry?: string,
+  year_added?: number;
+  location?: GeoPoint | null | undefined
+}
+
 export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
 
   app.get<AuthenticatedRequestByRegionId>(

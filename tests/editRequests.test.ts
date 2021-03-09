@@ -12,6 +12,9 @@ import arrayContaining = jasmine.arrayContaining;
 import {FastifyInstance} from "fastify";
 import objectContaining = jasmine.objectContaining;
 import any = jasmine.any;
+import {Business, createBusinessesEndpoint} from "../src/endpoints/businesses";
+import {Region} from "../src/database/productionDataLayer";
+import createRegionsEndpoint from "../src/endpoints/regions";
 
 const DummyAdd : EditRequest = {
   regionId: DummyRegion.name,
@@ -199,6 +202,63 @@ describe("Edit Request unit tests", () => {
     done();
   });
 
+  it("Can show a preview of the records that would be changed by an edit request", async(done) => {
+    async function createRegion(regionApp: FastifyInstance, region: Region) {
+      let temp = await regionApp.inject({
+        method: "POST",
+        url: `/regions/`,
+        payload: region,
+        headers: {authorization: `Bearer ${dummyAdminToken}`}
+      });
+      return temp;
+    }
+
+    async function createBusiness(bizApp: FastifyInstance, biz: Business) {
+      let temp = await bizApp.inject({
+        method: "POST",
+        url: `/regions/${biz.regionId}/businesses`,
+        payload: biz,
+        headers: {authorization: `Bearer ${dummyAdminToken}`}
+      });
+      return temp;
+    }
+
+    const regionApp = createRegionsEndpoint(testApp, testDataLayer, dummyTokenVerifier);
+    const bizApp = createBusinessesEndpoint(testApp, testDataLayer, dummyTokenVerifier);
+    await createRegion(regionApp, DummyRegion);
+    let biz1 = {...DummyBiz, name: "Deleting"};
+    let biz2 = {...DummyBiz, name: `OriginalName`, employees: DummyBiz.employees + 10, industry: `OriginalIndustry}`};
+    let {businessId: bizId1} = JSON.parse((await createBusiness(bizApp, biz1)).payload);
+    let {businessId: bizId2} = JSON.parse((await createBusiness(bizApp, biz2)).payload);
+    const request : EditRequest = {
+      ...DummyAdd,
+      updates: [{
+        id: bizId2,
+        name: "UpdatedName",
+        industry: "UpdatedIndustry"
+      }],
+      deletes: [bizId1]
+    };
+
+    let submitResponse = await submitEditRequest(request, DummyRegion.name, dummyRegionManagerToken);
+    expect(submitResponse.statusCode).toBe(201);
+    let {id} = JSON.parse(submitResponse.payload);
+
+    let previewResponse = await getEditPreview(id, dummyAdminToken);
+    expect(previewResponse.statusCode).toBe(200);
+    expect(JSON.parse(previewResponse.payload)).toStrictEqual(
+      objectContaining({
+        added: arrayContaining([objectContaining({...DummyBiz, id: any(String)})]),
+        updated: arrayContaining([objectContaining({...biz2, name: "UpdatedName", industry: "UpdatedIndustry"})]),
+        deleted: arrayContaining([objectContaining({...biz1, id: any(String)})])
+      })
+    );
+
+    await testApp.close();
+    done();
+  });
+
+
   async function getRequestById(requestId: string, token: string) : Promise<any> {
     return await editEndpoint.inject({
       method: "GET",
@@ -207,7 +267,7 @@ describe("Edit Request unit tests", () => {
     });
   }
 
-  async function submitEditRequest(request: any, regionId: string, token: string) {
+  async function submitEditRequest(request: EditRequest, regionId: string, token: string) {
     let postOptions = {
       method: <"POST">"POST",
       url: `/region/${regionId}/edits`,
@@ -235,6 +295,14 @@ describe("Edit Request unit tests", () => {
     return await editEndpoint.inject({
       method: "GET",
       url: `/region/${regionId}/edits`,
+      headers: {authorization: `Bearer ${token}`}
+    });
+  }
+
+  async function getEditPreview(id: string, token: string) {
+    return await editEndpoint.inject({
+      method: "GET",
+      url: `/edits/${id}/preview`,
       headers: {authorization: `Bearer ${token}`}
     });
   }

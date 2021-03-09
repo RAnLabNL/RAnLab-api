@@ -1,11 +1,11 @@
 import {FastifyInstance } from "fastify";
 import {DataLayer} from "../database/productionDataLayer";
-import {Business} from "./businesses";
+import {Business, BusinessUpdate} from "./businesses";
 import {Auth0JwtVerifier} from "../auth0";
 import {AuthenticatedRequest, AuthenticatedRequestById, AuthenticatedRequestByRegionId} from "./endpointUtils";
 import {isRegionManager} from "../utils";
 import {
-  createEditRequestSchema,
+  createEditRequestSchema, getEditPreviewSchema,
   getEditRequestByIdSchema,
   getEditRequestsByRegionSchema, getPendingEditRequestsSchema, getReviewedEditRequestsSchema, updateEditRequestSchema
 } from "./docs/editRequestSchemas";
@@ -16,14 +16,15 @@ export const URL_REVIEWED_EDIT_REQUESTS = "/edits/status/reviewed";
 export interface EditRequest {
   id?: string,
   regionId: string,
-  submitter: string,
-  dateSubmitted: Date | string,
-  dateUpdated: Date | string
+  submitter?: string,
+  dateSubmitted?: Date | string,
+  dateUpdated?: Date | string
   status?: string,
   adds?: Business[],
-  updates?: Business[] | undefined,
-  deletes?: string[] | undefined
+  updates?: BusinessUpdate[],
+  deletes?: string[]
 }
+
 
 interface CreateEditRequest extends AuthenticatedRequestByRegionId {
   Body: EditRequest
@@ -122,6 +123,47 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
           status: "ok",
           editRequests: await dataLayer.getEditRequestsByStatus("Reviewed")
         }
+        return JSON.stringify(response);
+      }
+    }
+  );
+
+  app.get<AuthenticatedRequestById>(
+    `/edits/:id/preview`,
+    {schema: getEditPreviewSchema},
+    async (request, reply) => {
+      let { admin } = await verifyJwt(request);
+      if(!admin) {
+        reply.unauthorized("Only admins may access this data!");
+        return;
+      } else {
+        let addedBusinesses: Business[] = [];
+        let updatedBusinesses: Business[] = [];
+        let deletedBusinesses: Business[] = [];
+        let editRequest = await dataLayer.getEditRequestById(request.params.id);
+        for(const add of editRequest?.adds || []) {
+          addedBusinesses.push({...add, id: "some-id"});
+        }
+        for (const update of editRequest?.updates || []) {
+          let biz = await dataLayer.getBusinessById(update.id)
+          if(!!biz) {
+            updatedBusinesses.push({...biz, ...update});
+          }
+        }
+        for (const delId of editRequest?.deletes || []) {
+          let biz = await dataLayer.getBusinessById(delId);
+          if(!!biz) {
+            deletedBusinesses.push(biz);
+          }
+        }
+
+        let response = {
+          status: "ok",
+          added: addedBusinesses,
+          updated: updatedBusinesses,
+          deleted: deletedBusinesses
+        }
+
         return JSON.stringify(response);
       }
     }

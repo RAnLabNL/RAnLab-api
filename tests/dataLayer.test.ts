@@ -4,7 +4,7 @@ import {Business} from "../src/endpoints/businesses";
 import objectContaining = jasmine.objectContaining;
 import {EditRequest} from "../src/endpoints/editRequest";
 import arrayContaining = jasmine.arrayContaining;
-import {DummyBiz} from "./testUtils/dummyData";
+import {DummyBiz, DummyBizUpdate} from "./testUtils/dummyData";
 
 describe("Production Data Layer Integration Tests", () => {
   const DUMMY_REGION_1 = "DummyRegion";
@@ -39,8 +39,11 @@ describe("Production Data Layer Integration Tests", () => {
     let id = (await productionDataLayer.setBusiness(biz)).id;
     expect(id).toBeTruthy();
 
-    let bizData = await productionDataLayer.getBusinessesByRegion(biz.regionId);
-    expect(bizData).toEqual(expect.arrayContaining([expect.objectContaining(biz)]));
+    let byIdData = await productionDataLayer.getBusinessById(id);
+    expect(byIdData).toEqual(expect.objectContaining({...biz}));
+
+    let byRegionData = await productionDataLayer.getBusinessesByRegion(biz.regionId);
+    expect(byRegionData).toEqual(expect.arrayContaining([expect.objectContaining(biz)]));
 
     let filters = await productionDataLayer.getFilters(biz.regionId);
     expect(filters).toEqual(expect.objectContaining({years: [{year: biz.year_added, count: 1}], industries: [{industry: biz.industry, count: 1}]}))
@@ -122,7 +125,7 @@ describe("Production Data Layer Integration Tests", () => {
       dateUpdated: new Date(),
       status: "Pending",
       adds:[DummyBiz],
-      updates: [DummyBiz],
+      updates: [DummyBizUpdate],
       deletes: [],
     };
 
@@ -133,7 +136,7 @@ describe("Production Data Layer Integration Tests", () => {
       dateUpdated: new Date(),
       status: "Pending",
       adds:[DummyBiz],
-      updates: [DummyBiz],
+      updates: [DummyBizUpdate],
       deletes: [],
     };
 

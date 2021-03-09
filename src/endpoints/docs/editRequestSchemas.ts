@@ -42,6 +42,31 @@ export const getEditRequestByIdSchema = {
   }
 };
 
+export const getEditPreviewSchema = {
+  params: byIdSchema,
+  response: {
+    200: {
+      description: 'Successful response',
+      type: 'object',
+      properties: {
+        status: {type: 'string'},
+        added: {
+          type: 'array',
+          items: businessSchema
+        },
+        updated: {
+          type: 'array',
+          items: businessSchema
+        },
+        deleted: {
+          type: 'array',
+          items: businessSchema
+        }
+      }
+    }
+  }
+};
+
 export const updateEditRequestSchema = {
   params: byIdSchema,
   response: {

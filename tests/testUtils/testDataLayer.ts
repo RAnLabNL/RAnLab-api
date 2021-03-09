@@ -13,7 +13,8 @@ export class DummyDatalayer implements DataLayer {
   }
 
   async setBusiness(business:Business): Promise<IdObject> {
-    this.businesses.push(business);
+    let id = `${Math.random()}`;
+    this.businesses.push({...business, id});
     let regionIndex = this.regions.findIndex((r) => r.name == business.regionId);
     let bizRegion = this.regions[regionIndex]
     if(!bizRegion.filters) {
@@ -28,7 +29,7 @@ export class DummyDatalayer implements DataLayer {
     } else {
       bizRegion.filters.industries[industryIndex].count++;
     }
-    return {id:"1"};
+    return {id};
   }
 
   async getFilters(regionId: string): Promise<Filters> {
@@ -70,7 +71,7 @@ export class DummyDatalayer implements DataLayer {
   }
 
   async getEditRequestById(id: string): Promise<EditRequest | null> {
-    return this.editRequests.filter((req) => req.id === id)[0];
+    return this.editRequests.find((req) => req.id === id) || null;
   }
 
   async updateEditRequest(body: EditRequest): Promise<EditRequest> {
@@ -83,8 +84,12 @@ export class DummyDatalayer implements DataLayer {
     return this.editRequests.filter((req) => req.status === status);
   }
 
+  async getBusinessById(id: string): Promise<Business | null> {
+    return this.businesses.find((b) => b.id === id) || null;
+  }
+
+
   clearRegions() {
     this.regions = [];
   }
-
 }
