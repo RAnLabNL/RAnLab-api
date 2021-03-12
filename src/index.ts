@@ -4,13 +4,15 @@ import createPingEndpoint from './endpoints/ping';
 import { addRoutes } from './utils';
 import { createBusinessesEndpoint} from "./endpoints/businesses";
 import createRegionsEndpoint from "./endpoints/regions";
-import {productionDataLayer} from "./database/productionDataLayer";
+import {ProductionDataLayer} from "./database/productionDataLayer";
 import {createFiltersEndpoint} from "./endpoints/filters";
 import {registerCorsHandler} from "./cors";
 import {registerSwagger} from "./swagger";
 import {verifyJwt} from "./auth0";
 import {createEditEndpoint} from "./endpoints/editRequest";
+import {productionFirestore} from "./database/firestore";
 
+let productionDataLayer = new ProductionDataLayer(productionFirestore)
 const port = Number(process.env.PORT || 8080);
 const server = fastify({logger: true});
 server.register(fastifySensible);

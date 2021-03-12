@@ -5,13 +5,11 @@ import {Auth0JwtVerifier} from "../auth0";
 import {AuthenticatedRequest, AuthenticatedRequestById, AuthenticatedRequestByRegionId} from "./endpointUtils";
 import {isRegionManager} from "../utils";
 import {
-  createEditRequestSchema, getEditPreviewSchema,
-  getEditRequestByIdSchema,
-  getEditRequestsByRegionSchema, getPendingEditRequestsSchema, getReviewedEditRequestsSchema, updateEditRequestSchema
+  createEditRequestSchema, getAllEditRequestsByStatusSchema, getEditPreviewSchema,
+  getEditRequestByIdSchema, getEditRequestsByRegionSchema, updateEditRequestSchema
 } from "./docs/editRequestSchemas";
 
-export const URL_PENDING_EDIT_REQUESTS = "/edits/status/pending";
-export const URL_REVIEWED_EDIT_REQUESTS = "/edits/status/reviewed";
+export const PAGE_SIZE = 25;
 
 export interface EditRequest {
   id?: string,
@@ -25,7 +23,6 @@ export interface EditRequest {
   deletes?: string[]
 }
 
-
 interface CreateEditRequest extends AuthenticatedRequestByRegionId {
   Body: EditRequest
 }
@@ -34,7 +31,77 @@ interface UpdateEditRequest extends AuthenticatedRequestById {
   Body: EditRequest
 }
 
+interface GetAllEditsByStatusRequest extends AuthenticatedRequest {
+  Querystring: {
+    status: string,
+    afterId: string
+  }
+}
+
 export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
+
+  app.get<AuthenticatedRequest>(
+    `/edits`,
+    {schema: getEditRequestByIdSchema},
+    async (request, reply) => {
+      let {userAppId} = await verifyJwt(request);
+      if(!userAppId) {
+        reply.unauthorized("Must be logged in!");
+        return;
+      } else {
+        let response = {
+          status: "ok",
+          editRequests: await dataLayer.getEditRequestsByUser(userAppId)
+        }
+        return JSON.stringify(response);
+      }
+    }
+  );
+
+  app.get<GetAllEditsByStatusRequest>(
+    "/edits/all",
+    {schema: getAllEditRequestsByStatusSchema},
+    async (request, reply) => {
+      let { admin } = await verifyJwt(request);
+      if(!admin) {
+        reply.unauthorized("Only admins may access this data!");
+        return;
+      } else {
+        let editRequests : EditRequest[];
+        if(!request.query.status) {
+          editRequests = await dataLayer.getAllEditRequests(request.query.afterId);
+        } else {
+          editRequests = await dataLayer.getEditRequestsByStatus(request.query.status, request.query.afterId)
+        }
+        let response = {
+          status: "ok",
+          editRequests: editRequests
+        }
+        return JSON.stringify(response);
+      }
+    }
+  );
+
+
+  app.get<AuthenticatedRequestByRegionId>(
+    `/region/:regionId/edits`,
+    {schema: getEditRequestsByRegionSchema},
+    async (request, reply) => {
+      let {userAppId, admin} = await verifyJwt(request);
+      if(!admin && !userAppId && !(await isRegionManager(userAppId, request.params.regionId, dataLayer))) {
+        reply.unauthorized("Must be logged in to submit requests");
+        return;
+      } else {
+        let response = {
+          status: "ok",
+          editRequests: <EditRequest[]>[]
+        }
+        response.editRequests = await dataLayer.getEditRequestsForRegion(request.params.regionId)
+        return JSON.stringify(response);
+      }
+    }
+  );
+
   app.get<AuthenticatedRequestById>(
     `/edits/:id`,
     {schema: getEditRequestByIdSchema},
@@ -69,61 +136,6 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
           status: "ok",
           editRequest: await dataLayer.updateEditRequest({...request.body, id: request.params.id})
         };
-      }
-    }
-  );
-
-  app.get<AuthenticatedRequestByRegionId>(
-    `/region/:regionId/edits`,
-    {schema: getEditRequestsByRegionSchema},
-    async (request, reply) => {
-      let {userAppId, admin} = await verifyJwt(request);
-      if(!admin && !userAppId && !(await isRegionManager(userAppId, request.params.regionId, dataLayer))) {
-        reply.unauthorized("Must be logged in to submit requests");
-        return;
-      } else {
-        let response = {
-          status: "ok",
-          editRequests: <EditRequest[]>[]
-        }
-        response.editRequests = await dataLayer.getEditRequestsForRegion(request.params.regionId)
-        return JSON.stringify(response);
-      }
-    }
-  );
-
-  app.get<AuthenticatedRequest>(
-    URL_PENDING_EDIT_REQUESTS,
-    {schema: getPendingEditRequestsSchema},
-    async (request, reply) => {
-      let { admin } = await verifyJwt(request);
-      if(!admin) {
-        reply.unauthorized("Only admins may access this data!");
-        return;
-      } else {
-        let response = {
-          status: "ok",
-          editRequests: await dataLayer.getEditRequestsByStatus("Pending")
-        }
-        return JSON.stringify(response);
-      }
-    }
-  );
-
-  app.get<AuthenticatedRequest>(
-    URL_REVIEWED_EDIT_REQUESTS,
-    {schema: getReviewedEditRequestsSchema},
-    async (request, reply) => {
-      let { admin } = await verifyJwt(request);
-      if(!admin) {
-        reply.unauthorized("Only admins may access this data!");
-        return;
-      } else {
-        let response = {
-          status: "ok",
-          editRequests: await dataLayer.getEditRequestsByStatus("Reviewed")
-        }
-        return JSON.stringify(response);
       }
     }
   );

@@ -1,10 +1,12 @@
-import {productionDataLayer, Region} from "../src/database/productionDataLayer";
-import {firestore} from "../src/database/firestore";
+import {ProductionDataLayer, Region} from "../src/database/productionDataLayer";
+import {testFirestore} from "./testUtils/testFirestore";
 import {Business} from "../src/endpoints/businesses";
 import objectContaining = jasmine.objectContaining;
-import {EditRequest} from "../src/endpoints/editRequest";
+import {EditRequest, PAGE_SIZE} from "../src/endpoints/editRequest";
 import arrayContaining = jasmine.arrayContaining;
 import {DummyBiz, DummyBizUpdate} from "./testUtils/dummyData";
+
+let productionDataLayer = new ProductionDataLayer(testFirestore);
 
 describe("Production Data Layer Integration Tests", () => {
   const DUMMY_REGION_1 = "DummyRegion";
@@ -12,14 +14,15 @@ describe("Production Data Layer Integration Tests", () => {
   let regionId : string;
 
   async function deleteRegionsNamed(regionName: string) {
-    (await firestore.collection("regions").where("name", "==", regionName).get()).docs
+    (await testFirestore.collection("regions").where("name", "==", regionName).get()).docs
       .forEach((doc) => doc.ref.delete());
   }
 
   beforeEach(async(done) => {
-    (await firestore.collection("businesses").where("name", "==", "DummyBiz").get()).docs.forEach((d) => d.ref.delete());
-    await firestore.collection("years").doc("2019").delete();
-    (await firestore.collection("editRequests").get()).docs.forEach(req => req.ref.delete());
+    (await testFirestore.collection("businesses").where("name", "==", "DummyBiz").get()).docs
+      .forEach((d) => d.ref.delete());
+    await testFirestore.collection("years").doc("2019").delete();
+    (await testFirestore.collection("editRequests").get()).docs.forEach(req => req.ref.delete());
     await deleteRegionsNamed(DUMMY_REGION_1);
     await deleteRegionsNamed(DUMMY_REGION_2);
 
@@ -183,7 +186,8 @@ describe("Production Data Layer Integration Tests", () => {
     expect(requestAfterUpdate).toStrictEqual(
       objectContaining({
         ...testRequest,
-        ...updateRequest
+        status: "Reviewed",
+        dateUpdated: updateRequest.dateUpdated
       })
     );
 
@@ -192,7 +196,8 @@ describe("Production Data Layer Integration Tests", () => {
     expect(readRequestAfterUpdate).toStrictEqual(
       objectContaining({
         ...testRequest,
-        ...updateRequest
+        status: "Reviewed",
+        dateUpdated: updateRequest.dateUpdated
       })
     );
 
@@ -200,6 +205,52 @@ describe("Production Data Layer Integration Tests", () => {
     expect(editRequests).toBeTruthy();
     expect(editRequests.length).toBe(1);
     expect(editRequests).toStrictEqual(arrayContaining([objectContaining({...testRequest, ...updateRequest, status: "Reviewed"})]))
+
+    done();
+  });
+
+  it("Paginates edit requests", async(done) => {
+    let region: Region = {
+      name: DUMMY_REGION_1,
+      manager: "Dummy Manager"
+    };
+    regionId = (await productionDataLayer.setRegion(region)).id;
+
+    let testRequest: EditRequest = {
+      regionId: regionId,
+      submitter: "first",
+      dateSubmitted: new Date(),
+      dateUpdated: new Date(),
+      status: "Pending",
+      adds: [DummyBiz],
+      updates: [DummyBizUpdate],
+      deletes: [],
+    };
+
+    let firstPageEdits = [];
+    for(let i = 0; i < PAGE_SIZE; i++) {
+      let {id} = await productionDataLayer.createEditRequest(testRequest);
+      expect(id).toBeTruthy();
+      testRequest.id = id;
+      firstPageEdits.push({...testRequest});
+    }
+    let lastIdOnFirstPage = firstPageEdits[firstPageEdits.length - 1].id;
+
+    let {id: id2} = await productionDataLayer.createEditRequest({...testRequest, submitter: "second"});
+    expect(id2).toBeTruthy();
+    let secondPageEdit = {...testRequest, id: id2, submitter: "second"};
+
+    let firstPageRecords = await productionDataLayer.getAllEditRequests();
+    expect(firstPageRecords).toStrictEqual(firstPageEdits);
+
+    let firstPagePending = await productionDataLayer.getEditRequestsByStatus("Pending");
+    expect(firstPagePending).toStrictEqual(firstPageEdits);
+
+    let secondPageRecords = await productionDataLayer.getAllEditRequests(lastIdOnFirstPage);
+    expect(secondPageRecords).toStrictEqual([secondPageEdit]);
+
+    let secondPagePending = await productionDataLayer.getEditRequestsByStatus("Pending", lastIdOnFirstPage);
+    expect(secondPagePending).toStrictEqual([secondPageEdit]);
 
     done();
   });

@@ -11,4 +11,4 @@ let firebaseConfig = {
 };
 
 export const app = firebase.initializeApp(firebaseConfig);
-export const firestore = app.firestore();
+export const productionFirestore = app.firestore();

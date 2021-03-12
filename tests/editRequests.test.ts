@@ -1,6 +1,6 @@
 import {DummyDatalayer} from "./testUtils/testDataLayer";
 import { testify} from "./testUtils/testify";
-import {createEditEndpoint, EditRequest, URL_PENDING_EDIT_REQUESTS, URL_REVIEWED_EDIT_REQUESTS} from "../src/endpoints/editRequest";
+import {createEditEndpoint, EditRequest, PAGE_SIZE} from "../src/endpoints/editRequest";
 import {
   dummyAdminToken,
   DummyBiz,
@@ -99,49 +99,7 @@ describe("Edit Request unit tests", () => {
     });
   });
 
-  it("Can view all pending edit requests as a system admin but not as region manager", async(done) => {
-    function getPendingEditRequests(token: string) {
-      return editEndpoint.inject({
-        method: "GET",
-        url: URL_PENDING_EDIT_REQUESTS,
-        headers: {authorization: `Bearer ${token}`}
-      });
-    }
-
-    const postResponse1 = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
-    expect(postResponse1.statusCode).toBe(201);
-
-    const differentRegionAdd =  {...DummyAdd, regionId: `Not${DummyRegion.name}`};
-    const postResponse2 = await submitEditRequest(differentRegionAdd, differentRegionAdd.regionId, dummyRegionManagerToken);
-    expect(postResponse2.statusCode).toBe(201);
-
-    const regionManagerResponse = await getPendingEditRequests(dummyRegionManagerToken);
-    expect(regionManagerResponse.statusCode).toBe(401);
-
-    const byRegionResponse = await getEditRequestsByRegion(DummyRegion.name, dummyRegionManagerToken);
-    expect(JSON.parse(byRegionResponse.payload).editRequests.length).toBe(1);
-
-    const getResponse = await getPendingEditRequests(dummyAdminToken);
-    expect(getResponse.statusCode).toBe(200);
-    let postedRequest1 = asResponse(asInitializedEditRequest(DummyAdd, JSON.parse(postResponse1.payload).id));
-    let postedRequest2 = asResponse(asInitializedEditRequest(differentRegionAdd,  JSON.parse(postResponse2.payload).id));
-    expect(JSON.parse(getResponse.payload).editRequests).toStrictEqual(arrayContaining([
-      postedRequest1,
-      postedRequest2
-    ]));
-
-    await testApp.close();
-    done();
-  });
-
-  it("Can view all reviewed edit requests as sysadmin but not region manager", async (done) => {
-    function getReviewedEditRequests(token: string) {
-      return editEndpoint.inject({
-        method: "GET",
-        url: URL_REVIEWED_EDIT_REQUESTS,
-        headers: {authorization: `Bearer ${token}`}
-      });
-    }
+  it("Can view all edit requests as a system admin but not as region manager", async(done) => {
 
     const postResponse1 = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
     expect(postResponse1.statusCode).toBe(201);
@@ -150,29 +108,69 @@ describe("Edit Request unit tests", () => {
     const differentRegionAdd =  {...DummyAdd, regionId: `Not${DummyRegion.name}`};
     const postResponse2 = await submitEditRequest(differentRegionAdd, differentRegionAdd.regionId, dummyRegionManagerToken);
     expect(postResponse2.statusCode).toBe(201);
-    let {id: id2} = JSON.parse(postResponse2.payload);
+
+    const regionManagerResponse = await getAllEditRequests(dummyRegionManagerToken);
+    expect(regionManagerResponse.statusCode).toBe(401);
+
+    const allResponse = await getAllEditRequests(dummyAdminToken);
+    expect(allResponse.statusCode).toBe(200);
+
+    let postedRequest1 = asResponse(asInitializedEditRequest(DummyAdd, JSON.parse(postResponse1.payload).id));
+    let postedRequest2 = asResponse(asInitializedEditRequest(differentRegionAdd,  JSON.parse(postResponse2.payload).id));
+    expect(JSON.parse(allResponse.payload).editRequests).toStrictEqual(arrayContaining([
+      postedRequest1,
+      postedRequest2
+    ]));
+
+    const pendingResponse = await getAllEditRequests(dummyAdminToken, {status: "Pending"});
+    expect(pendingResponse.statusCode).toBe(200);
+    expect(JSON.parse(pendingResponse.payload).editRequests).toStrictEqual(arrayContaining([
+      postedRequest1,
+      postedRequest2
+    ]));
 
     await updateEditRequestStatus(id1, "Reviewed", dummyAdminToken);
-    await updateEditRequestStatus(id2, "Reviewed", dummyAdminToken);
 
-    const adminResponse = await getReviewedEditRequests(dummyAdminToken);
+    const adminResponse = await getAllEditRequests(dummyAdminToken, {status: "Reviewed"}     );
     expect(adminResponse.statusCode).toBe(200);
     expect(JSON.parse(adminResponse.payload).editRequests).toStrictEqual(
       arrayContaining([
         objectContaining({...DummyAdd, id: id1, status: "Reviewed", dateSubmitted: any(String), dateUpdated: any(String)}),
-        objectContaining({...differentRegionAdd, id: id2, status: "Reviewed", dateSubmitted: any(String), dateUpdated: any(String)}),
       ])
     );
 
-    const regionManagerResponse = await getReviewedEditRequests(dummyRegionManagerToken);
-    expect(regionManagerResponse.statusCode).toBe(401);
+    await testApp.close();
+    done();
+  });
 
-    const unauthenticatedResponse = await getReviewedEditRequests("");
-    expect(unauthenticatedResponse.statusCode).toBe(401);
+  it("Can retrieve all edit requests with pagination", async(done) => {
+
+    let firstPageObjects = <EditRequest[]>[];
+    for(let i = 0; i < PAGE_SIZE; i++) {
+      const page1Response = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
+      expect(page1Response.statusCode).toBe(201);
+      let {id} = JSON.parse(page1Response.payload);
+      firstPageObjects.push(asResponse(asInitializedEditRequest(DummyAdd, id)));
+    }
+    const page2Response = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
+    expect(page2Response.statusCode).toBe(201);
+    let {id: id2} = JSON.parse(page2Response.payload);
+    let secondPageRequest = asResponse(asInitializedEditRequest(DummyAdd, id2));
+
+    const firstPageResponse = await getAllEditRequests(dummyAdminToken);
+    expect(firstPageResponse.statusCode).toBe(200);
+    expect(JSON.parse(firstPageResponse.payload).editRequests).toStrictEqual(firstPageObjects);
+
+    let afterId = firstPageObjects[firstPageObjects.length-1].id;
+    afterId = !!afterId? afterId : "";
+    const secondPageResponse = await getAllEditRequests(dummyAdminToken, {afterId});
+    expect(secondPageResponse.statusCode).toBe(200);
+    expect(JSON.parse(secondPageResponse.payload).editRequests).toStrictEqual([secondPageRequest]);
 
     await testApp.close();
     done();
   })
+
 
   it("Can only update edit request status as sysadmin", async(done) => {
     const submitResponse = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
@@ -226,18 +224,18 @@ describe("Edit Request unit tests", () => {
     const regionApp = createRegionsEndpoint(testApp, testDataLayer, dummyTokenVerifier);
     const bizApp = createBusinessesEndpoint(testApp, testDataLayer, dummyTokenVerifier);
     await createRegion(regionApp, DummyRegion);
-    let biz1 = {...DummyBiz, name: "Deleting"};
-    let biz2 = {...DummyBiz, name: `OriginalName`, employees: DummyBiz.employees + 10, industry: `OriginalIndustry}`};
+    let biz1 = {...DummyBiz, name: `UpdatingName`, employees: DummyBiz.employees + 10, industry: `OriginalIndustry}`};
+    let biz2 = {...DummyBiz, name: "Deleting"};
     let {businessId: bizId1} = JSON.parse((await createBusiness(bizApp, biz1)).payload);
     let {businessId: bizId2} = JSON.parse((await createBusiness(bizApp, biz2)).payload);
     const request : EditRequest = {
       ...DummyAdd,
       updates: [{
-        id: bizId2,
+        id: bizId1,
         name: "UpdatedName",
         industry: "UpdatedIndustry"
       }],
-      deletes: [bizId1]
+      deletes: [bizId2]
     };
 
     let submitResponse = await submitEditRequest(request, DummyRegion.name, dummyRegionManagerToken);
@@ -249,8 +247,8 @@ describe("Edit Request unit tests", () => {
     expect(JSON.parse(previewResponse.payload)).toStrictEqual(
       objectContaining({
         added: arrayContaining([objectContaining({...DummyBiz, id: any(String)})]),
-        updated: arrayContaining([objectContaining({...biz2, name: "UpdatedName", industry: "UpdatedIndustry"})]),
-        deleted: arrayContaining([objectContaining({...biz1, id: any(String)})])
+        updated: arrayContaining([objectContaining({...biz1, id: bizId1, name: "UpdatedName", industry: "UpdatedIndustry"})]),
+        deleted: arrayContaining([objectContaining({...biz2, id: bizId2})])
       })
     );
 
@@ -303,6 +301,21 @@ describe("Edit Request unit tests", () => {
     return await editEndpoint.inject({
       method: "GET",
       url: `/edits/${id}/preview`,
+      headers: {authorization: `Bearer ${token}`}
+    });
+  }
+
+  function getAllEditRequests(token: string, params?: {status?: string, afterId?: string}) {
+    let statusParam, pageParam;
+    if (!!params) {
+      statusParam = !!params.status ? `status=${params.status}` : "";
+      pageParam = !!params.afterId ? `afterId=${params.afterId}` : "";
+    }
+    let querystring = !!statusParam || !!pageParam ? `?${statusParam}&${pageParam}` : "";
+    let url = `/edits/all${querystring}`;
+    return editEndpoint.inject({
+      method: "GET",
+      url,
       headers: {authorization: `Bearer ${token}`}
     });
   }

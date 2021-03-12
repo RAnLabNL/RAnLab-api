@@ -1,6 +1,6 @@
 import {DataLayer, Filters, IdObject, Region} from "../../src/database/productionDataLayer";
 import {Business} from "../../src/endpoints/businesses";
-import { EditRequest } from "../../src/endpoints/editRequest";
+import {EditRequest, PAGE_SIZE} from "../../src/endpoints/editRequest";
 
 export class DummyDatalayer implements DataLayer {
 
@@ -66,12 +66,26 @@ export class DummyDatalayer implements DataLayer {
     return this.editRequests.filter((req) => req.regionId === regionId);
   }
 
-  async getAllEditRequests(): Promise<EditRequest[]> {
-    return this.editRequests;
+  async getAllEditRequests(afterId?: string): Promise<EditRequest[]> {
+    let startIndex = !!afterId? this.editRequests.findIndex((r) => r.id === afterId) + 1 : 0;
+    return this.editRequests.slice(startIndex, startIndex + PAGE_SIZE);
+  }
+
+  async getEditRequestsByStatus(status: string, afterId?: string): Promise<EditRequest[]> {
+    let startIndex = !!afterId? this.editRequests.findIndex((r) => r.id === afterId) + 1 : 0;
+    return this.editRequests.filter((req) => req.status === status).slice(startIndex, startIndex + PAGE_SIZE);
   }
 
   async getEditRequestById(id: string): Promise<EditRequest | null> {
     return this.editRequests.find((req) => req.id === id) || null;
+  }
+
+  async getBusinessById(id: string): Promise<Business | null> {
+    return this.businesses.find((b) => b.id === id) || null;
+  }
+
+  async getEditRequestsByUser(userAppId: string): Promise<EditRequest[]> {
+    return this.editRequests.filter((r) => r.submitter === userAppId);
   }
 
   async updateEditRequest(body: EditRequest): Promise<EditRequest> {
@@ -80,16 +94,8 @@ export class DummyDatalayer implements DataLayer {
     return this.editRequests[index];
   }
 
-  async getEditRequestsByStatus(status: string): Promise<EditRequest[]> {
-    return this.editRequests.filter((req) => req.status === status);
-  }
-
-  async getBusinessById(id: string): Promise<Business | null> {
-    return this.businesses.find((b) => b.id === id) || null;
-  }
-
-
   clearRegions() {
     this.regions = [];
   }
+
 }
