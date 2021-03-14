@@ -145,6 +145,11 @@ describe("Edit Request unit tests", () => {
 
   it("Can retrieve all edit requests with pagination", async(done) => {
 
+    const page2Response = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
+    expect(page2Response.statusCode).toBe(201);
+    let {id: id2} = JSON.parse(page2Response.payload);
+    let secondPageRequest = asResponse(asInitializedEditRequest(DummyAdd, id2));
+
     let firstPageObjects = <EditRequest[]>[];
     for(let i = 0; i < PAGE_SIZE; i++) {
       const page1Response = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
@@ -152,16 +157,13 @@ describe("Edit Request unit tests", () => {
       let {id} = JSON.parse(page1Response.payload);
       firstPageObjects.push(asResponse(asInitializedEditRequest(DummyAdd, id)));
     }
-    const page2Response = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
-    expect(page2Response.statusCode).toBe(201);
-    let {id: id2} = JSON.parse(page2Response.payload);
-    let secondPageRequest = asResponse(asInitializedEditRequest(DummyAdd, id2));
 
     const firstPageResponse = await getAllEditRequests(dummyAdminToken);
     expect(firstPageResponse.statusCode).toBe(200);
-    expect(JSON.parse(firstPageResponse.payload).editRequests).toStrictEqual(firstPageObjects);
+    let firstResponseEdits = JSON.parse(firstPageResponse.payload).editRequests;
+    expect(firstResponseEdits).toStrictEqual(arrayContaining(firstPageObjects));
 
-    let afterId = firstPageObjects[firstPageObjects.length-1].id;
+    let afterId = firstResponseEdits[firstResponseEdits.length-1].id;
     afterId = !!afterId? afterId : "";
     const secondPageResponse = await getAllEditRequests(dummyAdminToken, {afterId});
     expect(secondPageResponse.statusCode).toBe(200);

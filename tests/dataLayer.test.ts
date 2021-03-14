@@ -8,6 +8,24 @@ import {DummyBiz, DummyBizUpdate} from "./testUtils/dummyData";
 import any = jasmine.any;
 
 let productionDataLayer = new ProductionDataLayer(testFirestore);
+function  toBeLaterThan(expectedEarlierDate: Date | string | undefined, expectedLaterDate: Date) {
+  if(!expectedEarlierDate) {
+    return {
+      pass: false,
+      message: `Expected ${expectedEarlierDate} to be a date`
+    }
+  } else {
+    return new Date(expectedEarlierDate) < expectedLaterDate
+      ? {
+        pass: true,
+        message: () => `Expected ${expectedLaterDate} to be after ${expectedEarlierDate}`
+      }
+      : {
+        pass: false,
+        message: () => `Expected ${expectedLaterDate} to be after ${expectedEarlierDate}`
+      };
+  }
+}
 
 describe("Production Data Layer Integration Tests", () => {
   const DUMMY_REGION_1 = "DummyRegion";
@@ -175,17 +193,14 @@ describe("Production Data Layer Integration Tests", () => {
 
     let requestAfterUpdate = await productionDataLayer.updateEditRequest(updateRequest);
 
-    function dateGreaterThan(date: Date) {
-      return (date2: Date) => date2 > date;
-    }
-
     expect(requestAfterUpdate).toStrictEqual(
       objectContaining({
         ...matchForTestRequest,
         status: "Reviewed",
-        dateUpdated: dateGreaterThan(matchForTestRequest.dateUpdated)
+        dateUpdated: any(Date)
       })
     );
+    expect(toBeLaterThan(requestAfterUpdate.dateUpdated, matchForTestRequest.dateUpdated));
 
     let readRequestAfterUpdate = await productionDataLayer.getEditRequestById(testRequest.id);
     expect(readRequestAfterUpdate).toBeTruthy();
@@ -193,9 +208,10 @@ describe("Production Data Layer Integration Tests", () => {
       objectContaining({
         ...testRequest,
         status: "Reviewed",
-        dateUpdated: dateGreaterThan(matchForTestRequest.dateUpdated)
+        dateUpdated: any(Date)
       })
     );
+    expect(toBeLaterThan(readRequestAfterUpdate?.dateUpdated, matchForTestRequest.dateUpdated));
 
     editRequests = await productionDataLayer.getEditRequestsByStatus("Reviewed");
     expect(editRequests).toBeTruthy();
@@ -206,6 +222,7 @@ describe("Production Data Layer Integration Tests", () => {
   });
 
   it("Paginates edit requests", async(done) => {
+    jest.setTimeout(30000);
     let region: Region = {
       name: DUMMY_REGION_1,
       manager: "Dummy Manager"
@@ -264,41 +281,48 @@ describe("Production Data Layer Integration Tests", () => {
     done();
   });
 
-  it("Retrieves businesses in chunks", async(done) => {
-    async function addBiz(i: number) {
-      let iBiz = {...DummyBiz, regionId, name:  `biz_${i}`};
-      let doc = testFirestore.collection("businesses").doc();
-      await doc.set(iBiz);
-      expect(doc.id).toBeTruthy();
-      return {...iBiz, id: doc.id};
-    }
-    jest.setTimeout(120000);
+  describe("Long running test", ()=> {
+    afterEach(async(done) => {
+      (await testFirestore.collection("businesses").get()).docs.forEach((biz) => biz.ref.delete());
+      done();
+    });
+    it("Retrieves businesses in chunks", async(done) => {
+      async function addBiz(i: number) {
+        let iBiz = {...DummyBiz, regionId, name:  `biz_${i}`};
+        let doc = testFirestore.collection("businesses").doc();
+        await doc.set(iBiz);
+        expect(doc.id).toBeTruthy();
+        return {...iBiz, id: doc.id};
+      }
+      jest.setTimeout(120000);
 
-    let region: Region = {
-      name: DUMMY_REGION_1,
-      manager: "Dummy Manager"
-    };
-    regionId = (await productionDataLayer.setRegion(region)).id;
+      let region: Region = {
+        name: DUMMY_REGION_1,
+        manager: "Dummy Manager"
+      };
+      regionId = (await productionDataLayer.setRegion(region)).id;
 
-    let firstChunkPromises: Promise<Business>[] = [];
-    let firstChunkBusinesses = [];
+      let firstChunkPromises: Promise<Business>[] = [];
+      let firstChunkBusinesses = [];
 
-    for(let i = 0; i < CHUNK_SIZE; i++) {
-      firstChunkPromises.push(addBiz(i));
-      firstChunkBusinesses.push(...(await Promise.all(firstChunkPromises)));
-      firstChunkPromises = [];
-    }
+      for(let i = 0; i < CHUNK_SIZE; i++) {
+        firstChunkPromises.push(addBiz(i));
+        firstChunkBusinesses.push(...(await Promise.all(firstChunkPromises)));
+        firstChunkPromises = [];
+      }
 
-    let secondChunkBiz = {...DummyBiz, regionId, name: `biz_999`};
-    let{id: id2} = await productionDataLayer.setBusiness(secondChunkBiz);
-    expect(id2).toBeTruthy();
+      let secondChunkBiz = {...DummyBiz, regionId, name: `biz_999`};
+      let{id: id2} = await productionDataLayer.setBusiness(secondChunkBiz);
+      expect(id2).toBeTruthy();
 
-    let firstChunk = await productionDataLayer.getAllBusinesses();
-    expect(firstChunk).toStrictEqual(arrayContaining(firstChunkBusinesses));
+      let firstChunk = await productionDataLayer.getAllBusinesses();
+      expect(firstChunk).toStrictEqual(arrayContaining(firstChunkBusinesses));
 
-    let secondChunk = await productionDataLayer.getAllBusinesses(firstChunk[CHUNK_SIZE -1].id);
-    expect(secondChunk).toStrictEqual([{...secondChunkBiz, id: id2}])
+      let secondChunk = await productionDataLayer.getAllBusinesses(firstChunk[CHUNK_SIZE -1].id);
+      expect(secondChunk).toStrictEqual([{...secondChunkBiz, id: id2}])
 
-    done();
+      done();
+    });
+
   })
 });

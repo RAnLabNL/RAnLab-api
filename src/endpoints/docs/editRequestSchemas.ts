@@ -42,48 +42,14 @@ export const getEditRequestByIdSchema = {
   }
 };
 
-export const getEditPreviewSchema = {
-  params: byIdSchema,
-  response: {
-    200: {
-      description: 'Successful response',
-      type: 'object',
-      properties: {
-        status: {type: 'string'},
-        added: {
-          type: 'array',
-          items: businessSchema
-        },
-        updated: {
-          type: 'array',
-          items: businessSchema
-        },
-        deleted: {
-          type: 'array',
-          items: businessSchema
-        }
-      }
-    }
-  }
-};
-
-export const updateEditRequestSchema = {
-  params: byIdSchema,
-  response: {
-    200: {
-      description: 'Successful response',
-      type: 'object',
-      properties: {
-        status: {type: 'string'},
-        editRequest: editRequestSchema
-      }
-    }
-  }
-}
-
-
 export const getEditRequestsByRegionSchema = {
   params: byRegionIdSchema,
+  querystring: {
+    type: 'object',
+    properties: {
+      afterId: {type: 'string'}
+    }
+  },
   response: {
     200: {
       description: 'Successful response',
@@ -122,6 +88,45 @@ export const getAllEditRequestsByStatusSchema = {
     }
   }
 };
+
+export const getEditPreviewSchema = {
+  params: byIdSchema,
+  response: {
+    200: {
+      description: 'Successful response',
+      type: 'object',
+      properties: {
+        status: {type: 'string'},
+        added: {
+          type: 'array',
+          items: businessSchema
+        },
+        updated: {
+          type: 'array',
+          items: businessSchema
+        },
+        deleted: {
+          type: 'array',
+          items: businessSchema
+        }
+      }
+    }
+  }
+};
+
+export const updateEditRequestSchema = {
+  params: byIdSchema,
+  response: {
+    200: {
+      description: 'Successful response',
+      type: 'object',
+      properties: {
+        status: {type: 'string'},
+        editRequest: editRequestSchema
+      }
+    }
+  }
+}
 
 export const createEditRequestSchema = {
   description: 'Creates the supplied edit request',

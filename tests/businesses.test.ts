@@ -9,25 +9,23 @@ import {
 } from "./testUtils/dummyData";
 import {getTestJwtVerifier,  setupAuth0TestEnv, testify} from "./testUtils/testify";
 import createRegionsEndpoint from "../src/endpoints/regions";
-import {FastifyInstance} from "fastify";
 
 describe("Business Endpoint Tests", () => {
   let testDataLayer: DummyDatalayer;
-  let  server: FastifyInstance;
   beforeAll(() => {
     setupAuth0TestEnv();
   });
 
   beforeEach(async (done) => {
     testDataLayer = new DummyDatalayer();
-    server = testify();
+    const server = testify();
     const regionsApp = createRegionsEndpoint(server, testDataLayer, getTestJwtVerifier("admin", true));
     await createDummyRegion(regionsApp);
     done();
   });
 
   it('Can create and retrieve a valid business', async(done) => {
-    const bizApp = createBusinessesEndpoint(server, testDataLayer, getTestJwtVerifier(DummyRegion.manager, false))
+    const bizApp = createBusinessesEndpoint(testify(), testDataLayer, getTestJwtVerifier(DummyRegion.manager, false))
     const createResponse = await createDummyBusiness(bizApp);
     expect(createResponse.statusCode).toBe(200);
 

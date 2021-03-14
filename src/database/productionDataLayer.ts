@@ -39,7 +39,7 @@ export interface DataLayer {
   getEditRequestById(id: string): Promise<EditRequest | null>;
   updateEditRequest(body: EditRequest): Promise<EditRequest>;
   getEditRequestsByStatus(status: string, afterId?: string): Promise<EditRequest[]>;
-  getEditRequestsByUser(userAppId: string): Promise<EditRequest[]>;
+  getEditRequestsByUser(userAppId: string, afterId?: string): Promise<EditRequest[]>;
   getAllBusinesses(afterId?: string): Promise<Business[]>;
 }
 

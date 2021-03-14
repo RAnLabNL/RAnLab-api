@@ -31,16 +31,29 @@ interface UpdateEditRequest extends AuthenticatedRequestById {
   Body: EditRequest
 }
 
-interface GetAllEditsByStatusRequest extends AuthenticatedRequest {
+interface GetPaginatedEditsByStatusRequest extends AuthenticatedRequest {
   Querystring: {
     status: string,
     afterId: string
   }
 }
 
+interface PaginatedQueryString {
+  afterId: string
+}
+
+interface GetPaginatedEditsRequest extends AuthenticatedRequest {
+  Querystring: PaginatedQueryString
+}
+
+interface GetPaginatedEditsByRegionId extends AuthenticatedRequestByRegionId {
+  Querystring: PaginatedQueryString
+}
+
+
 export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
 
-  app.get<AuthenticatedRequest>(
+  app.get<GetPaginatedEditsRequest>(
     `/edits`,
     {schema: getEditRequestByIdSchema},
     async (request, reply) => {
@@ -51,14 +64,14 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
       } else {
         let response = {
           status: "ok",
-          editRequests: await dataLayer.getEditRequestsByUser(userAppId)
+          editRequests: await dataLayer.getEditRequestsByUser(userAppId, request.query.afterId)
         }
         return JSON.stringify(response);
       }
     }
   );
 
-  app.get<GetAllEditsByStatusRequest>(
+  app.get<GetPaginatedEditsByStatusRequest>(
     "/edits/all",
     {schema: getAllEditRequestsByStatusSchema},
     async (request, reply) => {
@@ -83,7 +96,7 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
   );
 
 
-  app.get<AuthenticatedRequestByRegionId>(
+  app.get<GetPaginatedEditsByRegionId>(
     `/region/:regionId/edits`,
     {schema: getEditRequestsByRegionSchema},
     async (request, reply) => {
@@ -96,7 +109,7 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
           status: "ok",
           editRequests: <EditRequest[]>[]
         }
-        response.editRequests = await dataLayer.getEditRequestsForRegion(request.params.regionId)
+        response.editRequests = await dataLayer.getEditRequestsForRegion(request.params.regionId, request.query.afterId)
         return JSON.stringify(response);
       }
     }

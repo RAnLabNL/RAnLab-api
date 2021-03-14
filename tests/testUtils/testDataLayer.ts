@@ -8,6 +8,10 @@ export class DummyDatalayer implements DataLayer {
   regions: Region[] = [];
   editRequests: EditRequest[] = [];
 
+  async getBusinessById(id: string): Promise<Business | null> {
+    return this.businesses.find((b) => b.id === id) || null;
+  }
+
   async getBusinessesByRegion(_:string): Promise<Business[]> {
     return Promise.resolve(this.businesses);
   }
@@ -68,36 +72,38 @@ export class DummyDatalayer implements DataLayer {
     return {id: newRequest.id} ;
   }
 
-  async getEditRequestsForRegion(regionId: string, _?: string): Promise<EditRequest[]> {
-    return this.editRequests.filter((req) => req.regionId === regionId);
-  }
-
-  async getAllEditRequests(afterId?: string): Promise<EditRequest[]> {
-    let startIndex = !!afterId? this.editRequests.reverse().findIndex((r) => r.id === afterId) + 1 : 0;
-    return this.editRequests.reverse().slice(startIndex, startIndex + PAGE_SIZE);
-  }
-
-  async getEditRequestsByStatus(status: string, afterId?: string): Promise<EditRequest[]> {
-    let startIndex = !!afterId? this.editRequests.findIndex((r) => r.id === afterId) + 1 : 0;
-    return this.editRequests.filter((req) => req.status === status).reverse().slice(startIndex, startIndex + PAGE_SIZE);
-  }
-
   async getEditRequestById(id: string): Promise<EditRequest | null> {
     return this.editRequests.find((req) => req.id === id) || null;
   }
 
-  async getBusinessById(id: string): Promise<Business | null> {
-    return this.businesses.find((b) => b.id === id) || null;
+  async getEditRequestsForRegion(regionId: string, afterId?: string): Promise<EditRequest[]> {
+    return this.getPaginatedEditRequests(afterId, req => req.regionId === regionId);
   }
 
-  async getEditRequestsByUser(userAppId: string): Promise<EditRequest[]> {
-    return this.editRequests.filter((r) => r.submitter === userAppId).reverse();
+  async getAllEditRequests(afterId?: string): Promise<EditRequest[]> {
+    return this.getPaginatedEditRequests(afterId, () => true);
+  }
+
+  async getEditRequestsByStatus(status: string, afterId?: string): Promise<EditRequest[]> {
+    return this.getPaginatedEditRequests(afterId, (req) => req.status === status);
+  }
+
+  async getEditRequestsByUser(userAppId: string, afterId?: string): Promise<EditRequest[]> {
+    return this.getPaginatedEditRequests(afterId, (r) => r.submitter === userAppId);
   }
 
   async updateEditRequest(body: EditRequest): Promise<EditRequest> {
     let index = this.editRequests.findIndex((req) => req.id === body.id);
     this.editRequests[index] = {...this.editRequests[index], ...body};
     return this.editRequests[index];
+  }
+
+  getPaginatedEditRequests(afterId: string | undefined, filter: (r: EditRequest) => boolean) {
+    this.editRequests.reverse();
+    let startIndex = !!afterId? this.editRequests.findIndex((r) => r.id === afterId) + 1 : 0;
+    let ret =  this.editRequests.filter(filter).slice(startIndex, startIndex + PAGE_SIZE);
+    this.editRequests.reverse();
+    return ret;
   }
 
   clearRegions() {
