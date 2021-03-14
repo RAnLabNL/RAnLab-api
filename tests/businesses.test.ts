@@ -1,32 +1,32 @@
 import {DummyDatalayer} from "./testUtils/testDataLayer";
-import {createBusinessesEndpoint} from "../src/endpoints/businesses";
+import { CHUNK_SIZE, convertToCSV, createBusinessesEndpoint, CSV_HEADER} from "../src/endpoints/businesses";
 import {
   createDummyBusiness,
   createDummyRegion,
   dummyAdminToken,
-  DummyBiz, DummyRegion,
+  DummyBiz, DummyRegion, dummyRegionManagerToken, dummyTokenVerifier,
   getDummyBusinesses
 } from "./testUtils/dummyData";
 import {getTestJwtVerifier,  setupAuth0TestEnv, testify} from "./testUtils/testify";
 import createRegionsEndpoint from "../src/endpoints/regions";
+import {FastifyInstance} from "fastify";
 
 describe("Business Endpoint Tests", () => {
   let testDataLayer: DummyDatalayer;
-
+  let  server: FastifyInstance;
   beforeAll(() => {
     setupAuth0TestEnv();
   });
 
   beforeEach(async (done) => {
     testDataLayer = new DummyDatalayer();
-    const server = testify();
+    server = testify();
     const regionsApp = createRegionsEndpoint(server, testDataLayer, getTestJwtVerifier("admin", true));
     await createDummyRegion(regionsApp);
     done();
   });
 
   it('Can create and retrieve a valid business', async(done) => {
-    const server = testify();
     const bizApp = createBusinessesEndpoint(server, testDataLayer, getTestJwtVerifier(DummyRegion.manager, false))
     const createResponse = await createDummyBusiness(bizApp);
     expect(createResponse.statusCode).toBe(200);
@@ -55,6 +55,41 @@ describe("Business Endpoint Tests", () => {
     });
     expect(updateResponse.statusCode).toBe(200);
     expect(JSON.parse(updateResponse.payload).business).toEqual(updatedBiz);
+
+    await bizApp.close();
+    done();
+  });
+
+  it("Can export all businesses if and only if admin", async(done) => {
+    const bizApp = createBusinessesEndpoint(testify(), testDataLayer, dummyTokenVerifier);
+    async function exportBusinesses(token: string) {
+      return await bizApp.inject({
+        method: 'GET',
+        url: `/businesses/export`,
+        headers:{authorization: `Bearer ${token}`},
+        simulate: {
+          end: true,
+          split: true,
+          error: true,
+          close: true
+        }
+      });
+    }
+    let businesses = [];
+    for (let i=0; i <= CHUNK_SIZE; i++) {
+      let iBiz = {...DummyBiz, name: `biz_${i}`}
+      let {id} = await testDataLayer.setBusiness(iBiz);
+      businesses.push({...iBiz, id});
+    }
+    let expectedCSV = CSV_HEADER + convertToCSV(businesses);
+
+    let managerResponse = await exportBusinesses(dummyRegionManagerToken);
+    expect(managerResponse.statusCode).toBe(401);
+
+    let adminResponse = await exportBusinesses(dummyAdminToken);
+    expect(adminResponse.statusCode).toBe(200);
+    expect(adminResponse.headers['transfer-encoding']).toBe("chunked");
+    expect(adminResponse.payload).toBe(expectedCSV);
 
     await bizApp.close();
     done();

@@ -2,10 +2,21 @@ import type {FastifyInstance, RequestGenericInterface} from 'fastify';
 import {DataLayer, Filters} from "../database/productionDataLayer";
 import firebase from "firebase";
 import GeoPoint = firebase.firestore.GeoPoint;
-import {createBizSchema, getBizSchema, updateBizSchema} from "./docs/businessesSchemas";
+import {createBizSchema, exportBusinessesSchema, getBizSchema, updateBizSchema} from "./docs/businessesSchemas";
 import {isRegionManager} from "../utils";
 import {Auth0JwtVerifier} from "../auth0";
-import {AuthenticatedRequestByRegionId} from "./endpointUtils";
+import {AuthenticatedRequest, AuthenticatedRequestByRegionId} from "./endpointUtils";
+
+export const CHUNK_SIZE = 100;
+export const CSV_HEADER = "'id','name','location','regionId','industry','year_added','employees','location'\n";
+
+export function convertToCSV(businesses: Business[]) {
+  let csvChunk = "";
+  for(let biz of businesses) {
+    csvChunk += `'${biz.id}','${biz.name}','${biz.location}','${biz.regionId}','${biz.industry}',${biz.year_added},${biz.employees},${biz.location}\n`;
+  }
+  return csvChunk;
+}
 
 interface CreateBusinessRequest extends RequestGenericInterface {
   Params: {
@@ -106,6 +117,32 @@ export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLa
           business: updatedBiz
         };
         return JSON.stringify(response);
+      }
+    }
+  );
+
+  app.get<AuthenticatedRequest>(
+    '/businesses/export',
+    {schema: exportBusinessesSchema},
+    async (request,reply) => {
+      let {admin} = await verifyJwt(request);
+
+      if(!admin) {
+        reply.unauthorized("Only admin users can export all business rows!");
+        return;
+      } else {
+        reply.raw.writeHead(200, {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': 'attachment; filename=businesses.csx'
+        });
+
+        reply.raw.write(CSV_HEADER);
+        let chunk = await dataLayer.getAllBusinesses();
+        while(chunk.length > 0) {
+          reply.raw.write(convertToCSV(chunk));
+          chunk = await dataLayer.getAllBusinesses(chunk[chunk.length-1].id);
+        }
+        reply.raw.end();
       }
     }
   );

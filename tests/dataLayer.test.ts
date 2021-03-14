@@ -1,10 +1,11 @@
 import {ProductionDataLayer, Region} from "../src/database/productionDataLayer";
 import {testFirestore} from "./testUtils/testFirestore";
-import {Business} from "../src/endpoints/businesses";
+import {Business, CHUNK_SIZE} from "../src/endpoints/businesses";
 import objectContaining = jasmine.objectContaining;
 import {EditRequest, PAGE_SIZE} from "../src/endpoints/editRequest";
 import arrayContaining = jasmine.arrayContaining;
 import {DummyBiz, DummyBizUpdate} from "./testUtils/dummyData";
+import any = jasmine.any;
 
 let productionDataLayer = new ProductionDataLayer(testFirestore);
 
@@ -13,18 +14,11 @@ describe("Production Data Layer Integration Tests", () => {
   const DUMMY_REGION_2 = "DummyRegion2";
   let regionId : string;
 
-  async function deleteRegionsNamed(regionName: string) {
-    (await testFirestore.collection("regions").where("name", "==", regionName).get()).docs
-      .forEach((doc) => doc.ref.delete());
-  }
-
   beforeEach(async(done) => {
-    (await testFirestore.collection("businesses").where("name", "==", "DummyBiz").get()).docs
-      .forEach((d) => d.ref.delete());
-    await testFirestore.collection("years").doc("2019").delete();
+    (await testFirestore.collection("businesses").get()).docs.forEach((biz) => biz.ref.delete());
+    (await testFirestore.collection("years").get()).docs.forEach(yr => yr.ref.delete());
     (await testFirestore.collection("editRequests").get()).docs.forEach(req => req.ref.delete());
-    await deleteRegionsNamed(DUMMY_REGION_1);
-    await deleteRegionsNamed(DUMMY_REGION_2);
+    (await testFirestore.collection("regions").get()).docs.forEach(req => req.ref.delete());
 
     done();
   });
@@ -124,8 +118,6 @@ describe("Production Data Layer Integration Tests", () => {
     let testRequest : EditRequest = {
       regionId: regionId,
       submitter: "",
-      dateSubmitted: new Date(),
-      dateUpdated: new Date(),
       status: "Pending",
       adds:[DummyBiz],
       updates: [DummyBizUpdate],
@@ -135,8 +127,6 @@ describe("Production Data Layer Integration Tests", () => {
     let spoilerRequest : EditRequest = {
       regionId: `Not${regionId}`,
       submitter: "",
-      dateSubmitted: new Date(),
-      dateUpdated: new Date(),
       status: "Pending",
       adds:[DummyBiz],
       updates: [DummyBizUpdate],
@@ -151,43 +141,49 @@ describe("Production Data Layer Integration Tests", () => {
     expect(spoilerId).toBeTruthy();
     spoilerRequest.id = spoilerId;
 
+    let matchForTestRequest : any = {...testRequest, dateSubmitted: any(Date), dateUpdated: any(Date)};
     let editRequests = await productionDataLayer.getEditRequestsForRegion(regionId);
     expect(editRequests).toBeTruthy();
     expect(editRequests.length).toBe(1);
-    expect(editRequests).toStrictEqual(arrayContaining([testRequest]));
+    expect(editRequests).toStrictEqual(arrayContaining([matchForTestRequest]));
+    matchForTestRequest = editRequests[0];
 
     let singleRequest = await productionDataLayer.getEditRequestById(id);
     expect(singleRequest).toBeTruthy();
     if(!!singleRequest) {
-      expect(singleRequest).toStrictEqual(testRequest);
+      expect(singleRequest).toStrictEqual(matchForTestRequest);
       expect(singleRequest.regionId).toBe(regionId);
     }
 
+    let matchForSpoilerRequest = {...spoilerRequest, dateSubmitted: any(Date), dateUpdated: any(Date)}
     editRequests = await productionDataLayer.getAllEditRequests();
     expect(editRequests).toBeTruthy();
     expect(editRequests.length).toBe(2);
-    expect(editRequests).toStrictEqual(arrayContaining([testRequest, spoilerRequest]))
+    expect(editRequests).toStrictEqual(arrayContaining([matchForTestRequest, matchForSpoilerRequest]))
 
     editRequests = await productionDataLayer.getEditRequestsByStatus("Pending");
     expect(editRequests).toBeTruthy();
     expect(editRequests.length).toBe(2);
-    expect(editRequests).toStrictEqual(arrayContaining([testRequest, spoilerRequest]))
+    expect(editRequests).toStrictEqual(arrayContaining([matchForTestRequest, matchForSpoilerRequest]))
 
     let updateRequest = {
       id: testRequest.id,
       status: "Reviewed",
       regionId: testRequest.regionId,
-      dateSubmitted: testRequest.dateSubmitted,
-      dateUpdated: new Date(),
       submitter: testRequest.submitter
     };
 
     let requestAfterUpdate = await productionDataLayer.updateEditRequest(updateRequest);
+
+    function dateGreaterThan(date: Date) {
+      return (date2: Date) => date2 > date;
+    }
+
     expect(requestAfterUpdate).toStrictEqual(
       objectContaining({
-        ...testRequest,
+        ...matchForTestRequest,
         status: "Reviewed",
-        dateUpdated: updateRequest.dateUpdated
+        dateUpdated: dateGreaterThan(matchForTestRequest.dateUpdated)
       })
     );
 
@@ -197,7 +193,7 @@ describe("Production Data Layer Integration Tests", () => {
       objectContaining({
         ...testRequest,
         status: "Reviewed",
-        dateUpdated: updateRequest.dateUpdated
+        dateUpdated: dateGreaterThan(matchForTestRequest.dateUpdated)
       })
     );
 
@@ -219,39 +215,90 @@ describe("Production Data Layer Integration Tests", () => {
     let testRequest: EditRequest = {
       regionId: regionId,
       submitter: "first",
-      dateSubmitted: new Date(),
-      dateUpdated: new Date(),
       status: "Pending",
       adds: [DummyBiz],
       updates: [DummyBizUpdate],
       deletes: [],
     };
 
+    let {id: id2} = await productionDataLayer.createEditRequest({...testRequest, submitter: "second"});
+    expect(id2).toBeTruthy();
+    let secondPageEdit = {...testRequest, id: id2, submitter: "second"};
+
     let firstPageEdits = [];
     for(let i = 0; i < PAGE_SIZE; i++) {
       let {id} = await productionDataLayer.createEditRequest(testRequest);
       expect(id).toBeTruthy();
       testRequest.id = id;
-      firstPageEdits.push({...testRequest});
+      firstPageEdits.push({...testRequest, dateSubmitted: any(Date), dateUpdated: any(Date)});
     }
-    let lastIdOnFirstPage = firstPageEdits[firstPageEdits.length - 1].id;
-
-    let {id: id2} = await productionDataLayer.createEditRequest({...testRequest, submitter: "second"});
-    expect(id2).toBeTruthy();
-    let secondPageEdit = {...testRequest, id: id2, submitter: "second"};
+    let expectedFirstPageEdits = firstPageEdits.reverse();
 
     let firstPageRecords = await productionDataLayer.getAllEditRequests();
-    expect(firstPageRecords).toStrictEqual(firstPageEdits);
+    expect(firstPageRecords).toStrictEqual(expectedFirstPageEdits);
 
     let firstPagePending = await productionDataLayer.getEditRequestsByStatus("Pending");
-    expect(firstPagePending).toStrictEqual(firstPageEdits);
+    expect(firstPagePending).toStrictEqual(expectedFirstPageEdits);
 
+    let firstPageByRegion = await productionDataLayer.getEditRequestsForRegion(testRequest.regionId);
+    expect(firstPageByRegion).toStrictEqual(expectedFirstPageEdits);
+
+    let lastIdOnFirstPage = firstPageRecords[firstPageRecords.length-1].id;
+    let matchForSecondPage = {...secondPageEdit, dateSubmitted: any(Date), dateUpdated: any(Date)};
     let secondPageRecords = await productionDataLayer.getAllEditRequests(lastIdOnFirstPage);
-    expect(secondPageRecords).toStrictEqual([secondPageEdit]);
+    expect(secondPageRecords).toStrictEqual([matchForSecondPage]);
 
     let secondPagePending = await productionDataLayer.getEditRequestsByStatus("Pending", lastIdOnFirstPage);
-    expect(secondPagePending).toStrictEqual([secondPageEdit]);
+    expect(secondPagePending).toStrictEqual([matchForSecondPage]);
+
+    let secondPageForRegion = await productionDataLayer.getEditRequestsForRegion(testRequest.regionId, lastIdOnFirstPage);
+    expect(secondPageForRegion).toStrictEqual([matchForSecondPage]);
+
+    await productionDataLayer.updateEditRequest({id: id2, regionId: testRequest.regionId, submitter: "first"});
+    let firstPageForUser = await productionDataLayer.getEditRequestsByUser("first");
+    expect(firstPageForUser).toStrictEqual(expectedFirstPageEdits);
+
+    let secondPageForUser = await productionDataLayer.getEditRequestsByUser("first", lastIdOnFirstPage);
+    expect(secondPageForUser).toStrictEqual([{...matchForSecondPage, submitter: "first"}]);
 
     done();
   });
+
+  it("Retrieves businesses in chunks", async(done) => {
+    async function addBiz(i: number) {
+      let iBiz = {...DummyBiz, regionId, name:  `biz_${i}`};
+      let doc = testFirestore.collection("businesses").doc();
+      await doc.set(iBiz);
+      expect(doc.id).toBeTruthy();
+      return {...iBiz, id: doc.id};
+    }
+    jest.setTimeout(120000);
+
+    let region: Region = {
+      name: DUMMY_REGION_1,
+      manager: "Dummy Manager"
+    };
+    regionId = (await productionDataLayer.setRegion(region)).id;
+
+    let firstChunkPromises: Promise<Business>[] = [];
+    let firstChunkBusinesses = [];
+
+    for(let i = 0; i < CHUNK_SIZE; i++) {
+      firstChunkPromises.push(addBiz(i));
+      firstChunkBusinesses.push(...(await Promise.all(firstChunkPromises)));
+      firstChunkPromises = [];
+    }
+
+    let secondChunkBiz = {...DummyBiz, regionId, name: `biz_999`};
+    let{id: id2} = await productionDataLayer.setBusiness(secondChunkBiz);
+    expect(id2).toBeTruthy();
+
+    let firstChunk = await productionDataLayer.getAllBusinesses();
+    expect(firstChunk).toStrictEqual(arrayContaining(firstChunkBusinesses));
+
+    let secondChunk = await productionDataLayer.getAllBusinesses(firstChunk[CHUNK_SIZE -1].id);
+    expect(secondChunk).toStrictEqual([{...secondChunkBiz, id: id2}])
+
+    done();
+  })
 });

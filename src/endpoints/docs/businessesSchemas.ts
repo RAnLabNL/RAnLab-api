@@ -27,6 +27,13 @@ export const businessesSchema = {
   items: businessSchema
 };
 
+const bizByIdSchema = {
+  type: 'object',
+  properties: {
+    businessId: {type: "string"}
+  }
+};
+
 export const getBizSchema = {
   description:  "Returns all businesses located in the specified region",
   params: byRegionIdSchema,
@@ -45,6 +52,25 @@ export const getBizSchema = {
   }
 };
 
+export const exportBusinessesSchema = {
+  description: "Exports all business records as a stream of csv text",
+  responses: {
+    200: {
+      description: 'Successful response',
+      headers: {
+        schema: {
+          'transfer-encoding': 'chunked'
+        }
+      },
+      content: {
+        schema: {
+          'text/csv': 'string'
+        }
+      }
+    }
+  }
+};
+
 export const createBizSchema = {
   description:  "Creates a business in the specified region",
   params: byRegionIdSchema,
@@ -58,13 +84,6 @@ export const createBizSchema = {
         businessId: {type: "string"}
       }
     }
-  }
-};
-
-const bizByIdSchema = {
-  type: 'object',
-  properties: {
-    businessId: {type: "string"}
   }
 };
 

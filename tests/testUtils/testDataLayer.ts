@@ -1,5 +1,5 @@
 import {DataLayer, Filters, IdObject, Region} from "../../src/database/productionDataLayer";
-import {Business} from "../../src/endpoints/businesses";
+import {Business, CHUNK_SIZE} from "../../src/endpoints/businesses";
 import {EditRequest, PAGE_SIZE} from "../../src/endpoints/editRequest";
 
 export class DummyDatalayer implements DataLayer {
@@ -8,8 +8,14 @@ export class DummyDatalayer implements DataLayer {
   regions: Region[] = [];
   editRequests: EditRequest[] = [];
 
-  getBusinessesByRegion(_:string): Promise<Business[]> {
+  async getBusinessesByRegion(_:string): Promise<Business[]> {
     return Promise.resolve(this.businesses);
+  }
+
+  async getAllBusinesses(afterId?: string): Promise<Business[]> {
+    let startIndex = this.businesses.findIndex(biz => biz.id === afterId);
+    startIndex = startIndex > 0 ? startIndex + 1 : 0;
+    return this.businesses.slice(startIndex, startIndex + CHUNK_SIZE);
   }
 
   async setBusiness(business:Business): Promise<IdObject> {
@@ -62,18 +68,18 @@ export class DummyDatalayer implements DataLayer {
     return {id: newRequest.id} ;
   }
 
-  async getEditRequestsForRegion(regionId: string): Promise<EditRequest[]> {
+  async getEditRequestsForRegion(regionId: string, _?: string): Promise<EditRequest[]> {
     return this.editRequests.filter((req) => req.regionId === regionId);
   }
 
   async getAllEditRequests(afterId?: string): Promise<EditRequest[]> {
-    let startIndex = !!afterId? this.editRequests.findIndex((r) => r.id === afterId) + 1 : 0;
-    return this.editRequests.slice(startIndex, startIndex + PAGE_SIZE);
+    let startIndex = !!afterId? this.editRequests.reverse().findIndex((r) => r.id === afterId) + 1 : 0;
+    return this.editRequests.reverse().slice(startIndex, startIndex + PAGE_SIZE);
   }
 
   async getEditRequestsByStatus(status: string, afterId?: string): Promise<EditRequest[]> {
     let startIndex = !!afterId? this.editRequests.findIndex((r) => r.id === afterId) + 1 : 0;
-    return this.editRequests.filter((req) => req.status === status).slice(startIndex, startIndex + PAGE_SIZE);
+    return this.editRequests.filter((req) => req.status === status).reverse().slice(startIndex, startIndex + PAGE_SIZE);
   }
 
   async getEditRequestById(id: string): Promise<EditRequest | null> {
@@ -85,7 +91,7 @@ export class DummyDatalayer implements DataLayer {
   }
 
   async getEditRequestsByUser(userAppId: string): Promise<EditRequest[]> {
-    return this.editRequests.filter((r) => r.submitter === userAppId);
+    return this.editRequests.filter((r) => r.submitter === userAppId).reverse();
   }
 
   async updateEditRequest(body: EditRequest): Promise<EditRequest> {
@@ -97,5 +103,4 @@ export class DummyDatalayer implements DataLayer {
   clearRegions() {
     this.regions = [];
   }
-
 }
