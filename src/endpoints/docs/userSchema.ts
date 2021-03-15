@@ -33,8 +33,21 @@ export const getUserInfoRequestSchema = {
 };
 
 export const getAllUsersRequestSchema = {
-  description: 'Returns a single user specified by userAppId',
+  description: 'Returns all users, with optional pagination',
   securitySchemes: [],
+  querystring: {
+    type: 'object',
+    properties: {
+      per_page: {
+        type: 'number',
+        description: 'Number of users per page'
+      },
+      page: {
+        type: 'number',
+        description: 'Page number to retrieve'
+      }
+    }
+  },
   response: {
     200: {
       description: 'Successful response',
@@ -62,10 +75,7 @@ export const updateUserRequestSchema = {
       properties: {
         status: {type: 'string'},
         date: {type: 'string'},
-        userInfo: {
-          type: 'array',
-          items: userInfoSchema
-        }
+        userInfo: userInfoSchema
       }
     }
   }
