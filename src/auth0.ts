@@ -16,7 +16,8 @@ async function getAdminToken(refresh : boolean) {
         "grant_type": "client_credentials",
         "client_id": process.env.AUTH0_MGMT_CLIENT_ID,
         "client_secret": process.env.AUTH0_MGMT_CLIENT_SECRET,
-        "audience": `https://${mgmtDomain}/api/v2/`
+        "audience": `https://${mgmtDomain}/api/v2/`,
+        "scope": "read:users update:users read:users_app_metadata update:users_app_metadata"
       })
     });
     let refreshJson = await refreshResponse.json();
@@ -25,24 +26,115 @@ async function getAdminToken(refresh : boolean) {
   return moduleAdminToken;
 }
 
-async function getUserRole(userId: string, refresh = false) : Promise<{role: string}> {
+export interface Auth0UserInfo {
+  user_id: string, // Should be URL encoded since it may contain characters that do not work well in a URL.
+  username?: string,
+  email?: string
+  email_verified?: boolean,
+  phone_number?: string
+  phone_verified?: boolean,
+  created_at?: string,
+  updated_at?: string,
+  identities?: [
+    {
+      connection?: string,
+      user_id: string,
+      provider: string,
+      isSocial?: boolean
+    }
+  ],
+  app_metadata?: any,
+  user_metadata?: any,
+  picture?: string,
+  name?: string,
+  nickname?: string,
+  multifactor?: string[],
+  last_ip?: string,
+  last_login?: string,
+  logins_count?: number,
+  blocked?: boolean,
+  given_name?: string,
+  family_name?: string
+}
+
+export interface UserInfoPatch {
+  blocked?: boolean,
+  email_verified?: boolean,
+  email?: string,
+  phone_number?: string,
+  phone_verified?: boolean,
+  user_metadata?: any,
+  app_metadata?: any,
+  given_name?: string,
+  family_name?: string,
+  name?: string,
+  nickname?: string,
+  picture?: string,
+  verify_email?: boolean,
+  verify_phone_number?: boolean,
+  password?: string,
+  connection?: string,
+  client_id?: string,
+  username?: string
+}
+
+async function getUserRole(userId: string) {
+  let app_metadata = (await getUserById(userId)).app_metadata;
+  return {role: app_metadata.role};
+}
+
+/*
+  Get user by ID: https://auth0.com/docs/api/management/v2#!/Users/get_users_by_id
+  Get all users: https://auth0.com/docs/api/management/v2#!/Users/get_users
+  Update a user: https://auth0.com/docs/api/management/v2#!/Users/patch_users_by_id
+ */
+
+export async function getUserById(userId: string) : Promise<Auth0UserInfo> {
+  userId = userId.startsWith("auth0|") ? userId : `auth0|${userId}`;
+  return callManagementApi<Auth0UserInfo>(`/users/${userId}`);
+}
+
+export async function getAllUsers(per_page? : number, page?: number) {
+  let querystring = "";
+  if(!!per_page || !!page) {
+    querystring = "?";
+    let perPageClause = !per_page ? "" : `per_page=${per_page}`
+    let pageClause = !page ? "" : `page=${page}`;
+    querystring = `?${perPageClause}&${pageClause}`;
+  }
+  return callManagementApi<Auth0UserInfo[]>(`/users${querystring}`);
+}
+
+export async function updateUser(userId: string, userInfoPatch: UserInfoPatch) {
+  userId = userId.startsWith("auth0|") ? userId : `auth0|${userId}`;
+  return callManagementApi<Auth0UserInfo>(`/users/${userId}`, "PATCH", JSON.stringify(userInfoPatch));
+}
+
+async function callManagementApi<T>(path: string, method = "GET", body = "", refresh = false) : Promise<T> {
   let mgmtDomain = process.env.AUTH0_DOMAIN;
   let adminToken = await getAdminToken(refresh);
-  let url = `https://${mgmtDomain}/api/v2/users/${userId.replace("|", "%7C")}`;
-  let metaResponse = await fetch(url, {
+  let url = encodeURI(`https://${mgmtDomain}/api/v2${path}`);
+  let options : any = {
+    method,
     "headers": {
-      "Authorization": `Bearer ${adminToken}`,
+      "Authorization": `Bearer ${adminToken}`
     }
-  });
+  };
+  if(!!body) {
+    options.headers["Content-Type"] = "application/json";
+    options.body = body;
+  }
+  let metaResponse = await fetch(url, options);
   if(metaResponse.status === 200) {
-    let metadata = await metaResponse.json();
-    return {role: metadata.app_metadata.role};
+    let json = await metaResponse.json()
+    return json;
   } else if (!refresh && metaResponse.status === 401) {
-    return await getUserRole(userId, true);
+    return await callManagementApi<T>(path, method, body,true);
   } else {
     throw new Error(JSON.stringify(metaResponse));
   }
 }
+
 
 export async function getUserInfo(authHeader: string) {
   try {
@@ -59,7 +151,6 @@ export async function getUserInfo(authHeader: string) {
 }
 
 export type Auth0JwtVerifier = (request: FastifyRequest) => Promise<{userAppId: string, admin: boolean}>;
-
 export async function verifyJwt(request: FastifyRequest) {
   let authHeader = !request.headers.authorization ? "" : request.headers.authorization
   if(!authHeader) {

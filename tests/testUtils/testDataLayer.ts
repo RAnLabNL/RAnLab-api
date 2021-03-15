@@ -1,6 +1,6 @@
 import {DataLayer, Filters, IdObject, Region} from "../../src/database/productionDataLayer";
 import {Business, CHUNK_SIZE} from "../../src/endpoints/businesses";
-import {EditRequest, PAGE_SIZE} from "../../src/endpoints/editRequest";
+import {EditRequest} from "../../src/endpoints/editRequest";
 
 export class DummyDatalayer implements DataLayer {
 
@@ -76,20 +76,20 @@ export class DummyDatalayer implements DataLayer {
     return this.editRequests.find((req) => req.id === id) || null;
   }
 
-  async getEditRequestsForRegion(regionId: string, afterId?: string): Promise<EditRequest[]> {
-    return this.getPaginatedEditRequests(afterId, req => req.regionId === regionId);
+  async getEditRequestsForRegion(regionId: string, pageSize: number, afterId?: string): Promise<EditRequest[]> {
+    return this.getPaginatedEditRequests(pageSize, afterId, req => req.regionId === regionId);
   }
 
-  async getAllEditRequests(afterId?: string): Promise<EditRequest[]> {
-    return this.getPaginatedEditRequests(afterId, () => true);
+  async getAllEditRequests(pageSize: number, afterId?: string): Promise<EditRequest[]> {
+    return this.getPaginatedEditRequests(pageSize, afterId, () => true);
   }
 
-  async getEditRequestsByStatus(status: string, afterId?: string): Promise<EditRequest[]> {
-    return this.getPaginatedEditRequests(afterId, (req) => req.status === status);
+  async getEditRequestsByStatus(status: string, pageSize: number, afterId?: string): Promise<EditRequest[]> {
+    return this.getPaginatedEditRequests(pageSize, afterId, (req) => req.status === status);
   }
 
-  async getEditRequestsByUser(userAppId: string, afterId?: string): Promise<EditRequest[]> {
-    return this.getPaginatedEditRequests(afterId, (r) => r.submitter === userAppId);
+  async getEditRequestsByUser(userAppId: string, pageSize: number, afterId?: string): Promise<EditRequest[]> {
+    return this.getPaginatedEditRequests(pageSize, afterId, (r) => r.submitter === userAppId);
   }
 
   async updateEditRequest(body: EditRequest): Promise<EditRequest> {
@@ -98,10 +98,10 @@ export class DummyDatalayer implements DataLayer {
     return this.editRequests[index];
   }
 
-  getPaginatedEditRequests(afterId: string | undefined, filter: (r: EditRequest) => boolean) {
+  getPaginatedEditRequests(pageSize: number, afterId: string | undefined, filter: (r: EditRequest) => boolean) {
     this.editRequests.reverse();
     let startIndex = !!afterId? this.editRequests.findIndex((r) => r.id === afterId) + 1 : 0;
-    let ret =  this.editRequests.filter(filter).slice(startIndex, startIndex + PAGE_SIZE);
+    let ret =  this.editRequests.filter(filter).slice(startIndex, startIndex + pageSize);
     this.editRequests.reverse();
     return ret;
   }

@@ -2,10 +2,9 @@ import fastify, {FastifyInstance} from "fastify";
 import {addRoutes} from "../src/utils";
 import createRegionsEndpoint from "../src/endpoints/regions";
 import {DummyDatalayer} from "./testUtils/testDataLayer";
-import fetch from "node-fetch";
 import {createBusinessesEndpoint} from "../src/endpoints/businesses";
 import fastifySensible from "fastify-sensible";
-import { setupAuth0TestEnv} from "./testUtils/testify";
+import {authenticateToTestDomain, setupAuth0TestEnv} from "./testUtils/testify";
 import {DummyRegion} from "./testUtils/dummyData";
 import {DataLayer} from "../src/database/productionDataLayer";
 import {getUserInfo, verifyJwt} from "../src/auth0";
@@ -18,7 +17,9 @@ describe("Auth0 integration tests", () => {
 
   beforeAll(async (done) => {
     setupAuth0TestEnv();
-    await authenticateToTestDomain();
+    let authTokens = await authenticateToTestDomain();
+    userAccessToken = authTokens.userAccessToken;
+    adminAccessToken = authTokens.adminAccessToken;
     let userInfo = await getUserInfo(`Bearer ${userAccessToken}`);
     userAppId = userInfo.userId.split("|")[1];
     done();
@@ -112,35 +113,4 @@ describe("Auth0 integration tests", () => {
         done();
     });
   });
-
-  async function authenticateToTestDomain() {
-    let userResponse = await fetch(`https://${process.env.AUTH0_DOMAIN}/oauth/token`, {
-      method: "POST",
-      headers: {'content-type': 'application/json'},
-      body: JSON.stringify({
-        client_id: process.env.AUTH0_CLIENT_ID,
-        client_secret: process.env.AUTH0_CLIENT_SECRET,
-        username: process.env.TEST_AUTH0_USERNAME,
-        password: process.env.TEST_AUTH0_PASSWORD,
-        scope: 'openid',
-        grant_type: "password"
-      })
-    });
-    let userJson = await userResponse.json()
-    userAccessToken = userJson.access_token;
-    let adminResponse = await fetch(`https://${process.env.AUTH0_DOMAIN}/oauth/token`, {
-      method: "POST",
-      headers: {'content-type': 'application/json'},
-      body: JSON.stringify({
-        client_id: process.env.AUTH0_CLIENT_ID,
-        client_secret: process.env.AUTH0_CLIENT_SECRET,
-        username: process.env.TEST_AUTH0_ADMIN_USERNAME,
-        password: process.env.TEST_AUTH0_ADMIN_PASSWORD,
-        scope: 'openid',
-        grant_type: "password"
-      })
-    });
-    let adminJson = await adminResponse.json();
-    adminAccessToken = adminJson.access_token;
-  }
 });

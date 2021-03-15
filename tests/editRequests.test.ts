@@ -1,6 +1,6 @@
 import {DummyDatalayer} from "./testUtils/testDataLayer";
 import { testify} from "./testUtils/testify";
-import {createEditEndpoint, EditRequest, PAGE_SIZE} from "../src/endpoints/editRequest";
+import {createEditEndpoint, EditRequest, DEFAULT_PAGE_SIZE} from "../src/endpoints/editRequest";
 import {
   dummyAdminToken,
   DummyBiz,
@@ -151,7 +151,7 @@ describe("Edit Request unit tests", () => {
     let secondPageRequest = asResponse(asInitializedEditRequest(DummyAdd, id2));
 
     let firstPageObjects = <EditRequest[]>[];
-    for(let i = 0; i < PAGE_SIZE; i++) {
+    for(let i = 0; i < DEFAULT_PAGE_SIZE; i++) {
       const page1Response = await submitEditRequest(DummyAdd, DummyRegion.name, dummyRegionManagerToken);
       expect(page1Response.statusCode).toBe(201);
       let {id} = JSON.parse(page1Response.payload);

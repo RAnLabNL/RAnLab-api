@@ -2,7 +2,7 @@ import {ProductionDataLayer, Region} from "../src/database/productionDataLayer";
 import {testFirestore} from "./testUtils/testFirestore";
 import {Business, CHUNK_SIZE} from "../src/endpoints/businesses";
 import objectContaining = jasmine.objectContaining;
-import {EditRequest, PAGE_SIZE} from "../src/endpoints/editRequest";
+import {EditRequest, DEFAULT_PAGE_SIZE} from "../src/endpoints/editRequest";
 import arrayContaining = jasmine.arrayContaining;
 import {DummyBiz, DummyBizUpdate} from "./testUtils/dummyData";
 import any = jasmine.any;
@@ -160,7 +160,7 @@ describe("Production Data Layer Integration Tests", () => {
     spoilerRequest.id = spoilerId;
 
     let matchForTestRequest : any = {...testRequest, dateSubmitted: any(Date), dateUpdated: any(Date)};
-    let editRequests = await productionDataLayer.getEditRequestsForRegion(regionId);
+    let editRequests = await productionDataLayer.getEditRequestsForRegion(regionId, DEFAULT_PAGE_SIZE);
     expect(editRequests).toBeTruthy();
     expect(editRequests.length).toBe(1);
     expect(editRequests).toStrictEqual(arrayContaining([matchForTestRequest]));
@@ -174,12 +174,12 @@ describe("Production Data Layer Integration Tests", () => {
     }
 
     let matchForSpoilerRequest = {...spoilerRequest, dateSubmitted: any(Date), dateUpdated: any(Date)}
-    editRequests = await productionDataLayer.getAllEditRequests();
+    editRequests = await productionDataLayer.getAllEditRequests(DEFAULT_PAGE_SIZE);
     expect(editRequests).toBeTruthy();
     expect(editRequests.length).toBe(2);
     expect(editRequests).toStrictEqual(arrayContaining([matchForTestRequest, matchForSpoilerRequest]))
 
-    editRequests = await productionDataLayer.getEditRequestsByStatus("Pending");
+    editRequests = await productionDataLayer.getEditRequestsByStatus("Pending", DEFAULT_PAGE_SIZE);
     expect(editRequests).toBeTruthy();
     expect(editRequests.length).toBe(2);
     expect(editRequests).toStrictEqual(arrayContaining([matchForTestRequest, matchForSpoilerRequest]))
@@ -213,7 +213,7 @@ describe("Production Data Layer Integration Tests", () => {
     );
     expect(toBeLaterThan(readRequestAfterUpdate?.dateUpdated, matchForTestRequest.dateUpdated));
 
-    editRequests = await productionDataLayer.getEditRequestsByStatus("Reviewed");
+    editRequests = await productionDataLayer.getEditRequestsByStatus("Reviewed", DEFAULT_PAGE_SIZE);
     expect(editRequests).toBeTruthy();
     expect(editRequests.length).toBe(1);
     expect(editRequests).toStrictEqual(arrayContaining([objectContaining({...testRequest, ...updateRequest, status: "Reviewed"})]))
@@ -243,7 +243,7 @@ describe("Production Data Layer Integration Tests", () => {
     let secondPageEdit = {...testRequest, id: id2, submitter: "second"};
 
     let firstPageEdits = [];
-    for(let i = 0; i < PAGE_SIZE; i++) {
+    for(let i = 0; i < DEFAULT_PAGE_SIZE; i++) {
       let {id} = await productionDataLayer.createEditRequest(testRequest);
       expect(id).toBeTruthy();
       testRequest.id = id;
@@ -251,31 +251,31 @@ describe("Production Data Layer Integration Tests", () => {
     }
     let expectedFirstPageEdits = firstPageEdits.reverse();
 
-    let firstPageRecords = await productionDataLayer.getAllEditRequests();
+    let firstPageRecords = await productionDataLayer.getAllEditRequests(DEFAULT_PAGE_SIZE);
     expect(firstPageRecords).toStrictEqual(expectedFirstPageEdits);
 
-    let firstPagePending = await productionDataLayer.getEditRequestsByStatus("Pending");
+    let firstPagePending = await productionDataLayer.getEditRequestsByStatus("Pending", DEFAULT_PAGE_SIZE);
     expect(firstPagePending).toStrictEqual(expectedFirstPageEdits);
 
-    let firstPageByRegion = await productionDataLayer.getEditRequestsForRegion(testRequest.regionId);
+    let firstPageByRegion = await productionDataLayer.getEditRequestsForRegion(testRequest.regionId, DEFAULT_PAGE_SIZE);
     expect(firstPageByRegion).toStrictEqual(expectedFirstPageEdits);
 
     let lastIdOnFirstPage = firstPageRecords[firstPageRecords.length-1].id;
     let matchForSecondPage = {...secondPageEdit, dateSubmitted: any(Date), dateUpdated: any(Date)};
-    let secondPageRecords = await productionDataLayer.getAllEditRequests(lastIdOnFirstPage);
+    let secondPageRecords = await productionDataLayer.getAllEditRequests(DEFAULT_PAGE_SIZE, lastIdOnFirstPage);
     expect(secondPageRecords).toStrictEqual([matchForSecondPage]);
 
-    let secondPagePending = await productionDataLayer.getEditRequestsByStatus("Pending", lastIdOnFirstPage);
+    let secondPagePending = await productionDataLayer.getEditRequestsByStatus("Pending", DEFAULT_PAGE_SIZE, lastIdOnFirstPage);
     expect(secondPagePending).toStrictEqual([matchForSecondPage]);
 
-    let secondPageForRegion = await productionDataLayer.getEditRequestsForRegion(testRequest.regionId, lastIdOnFirstPage);
+    let secondPageForRegion = await productionDataLayer.getEditRequestsForRegion(testRequest.regionId, DEFAULT_PAGE_SIZE, lastIdOnFirstPage);
     expect(secondPageForRegion).toStrictEqual([matchForSecondPage]);
 
     await productionDataLayer.updateEditRequest({id: id2, regionId: testRequest.regionId, submitter: "first"});
-    let firstPageForUser = await productionDataLayer.getEditRequestsByUser("first");
+    let firstPageForUser = await productionDataLayer.getEditRequestsByUser("first", DEFAULT_PAGE_SIZE);
     expect(firstPageForUser).toStrictEqual(expectedFirstPageEdits);
 
-    let secondPageForUser = await productionDataLayer.getEditRequestsByUser("first", lastIdOnFirstPage);
+    let secondPageForUser = await productionDataLayer.getEditRequestsByUser("first", DEFAULT_PAGE_SIZE, lastIdOnFirstPage);
     expect(secondPageForUser).toStrictEqual([{...matchForSecondPage, submitter: "first"}]);
 
     done();

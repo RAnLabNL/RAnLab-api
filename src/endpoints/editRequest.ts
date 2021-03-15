@@ -9,7 +9,7 @@ import {
   getEditRequestByIdSchema, getEditRequestsByRegionSchema, updateEditRequestSchema
 } from "./docs/editRequestSchemas";
 
-export const PAGE_SIZE = 25;
+export const DEFAULT_PAGE_SIZE = 25;
 
 export interface EditRequest {
   id?: string,
@@ -34,12 +34,14 @@ interface UpdateEditRequest extends AuthenticatedRequestById {
 interface GetPaginatedEditsByStatusRequest extends AuthenticatedRequest {
   Querystring: {
     status: string,
+    pageSize: number,
     afterId: string
   }
 }
 
 interface PaginatedQueryString {
-  afterId: string
+  afterId: string,
+  pageSize: number
 }
 
 interface GetPaginatedEditsRequest extends AuthenticatedRequest {
@@ -62,9 +64,10 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
         reply.unauthorized("Must be logged in!");
         return;
       } else {
+        let pageSize = !!request.query.pageSize && request.query.pageSize > 0 ? request.query.pageSize : DEFAULT_PAGE_SIZE;
         let response = {
           status: "ok",
-          editRequests: await dataLayer.getEditRequestsByUser(userAppId, request.query.afterId)
+          editRequests: await dataLayer.getEditRequestsByUser(userAppId, pageSize, request.query.afterId)
         }
         return JSON.stringify(response);
       }
@@ -81,10 +84,11 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
         return;
       } else {
         let editRequests : EditRequest[];
+        let pageSize = !!request.query.pageSize && request.query.pageSize > 0 ? request.query.pageSize : DEFAULT_PAGE_SIZE;
         if(!request.query.status) {
-          editRequests = await dataLayer.getAllEditRequests(request.query.afterId);
+          editRequests = await dataLayer.getAllEditRequests(pageSize, request.query.afterId);
         } else {
-          editRequests = await dataLayer.getEditRequestsByStatus(request.query.status, request.query.afterId)
+          editRequests = await dataLayer.getEditRequestsByStatus(request.query.status, pageSize, request.query.afterId)
         }
         let response = {
           status: "ok",
@@ -95,7 +99,6 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
     }
   );
 
-
   app.get<GetPaginatedEditsByRegionId>(
     `/region/:regionId/edits`,
     {schema: getEditRequestsByRegionSchema},
@@ -105,11 +108,12 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
         reply.unauthorized("Must be logged in to submit requests");
         return;
       } else {
+        let pageSize = !!request.query.pageSize && request.query.pageSize > 0 ? request.query.pageSize : DEFAULT_PAGE_SIZE;
         let response = {
           status: "ok",
           editRequests: <EditRequest[]>[]
         }
-        response.editRequests = await dataLayer.getEditRequestsForRegion(request.params.regionId, request.query.afterId)
+        response.editRequests = await dataLayer.getEditRequestsForRegion(request.params.regionId, pageSize, request.query.afterId)
         return JSON.stringify(response);
       }
     }

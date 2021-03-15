@@ -1,5 +1,5 @@
 import {Business, CHUNK_SIZE} from "../endpoints/businesses";
-import {EditRequest, PAGE_SIZE} from "../endpoints/editRequest";
+import {EditRequest} from "../endpoints/editRequest";
 import firebase from "firebase";
 import Timestamp = firebase.firestore.Timestamp;
 
@@ -27,20 +27,20 @@ export interface Filters {
 export interface DataLayer {
   setBusiness(business: Business) : Promise<IdObject>;
   getBusinessById(id: string): Promise<Business | null>;
+  getAllBusinesses(afterId?: string): Promise<Business[]>;
   getBusinessesByRegion(region: string): Promise<Business[]>;
   getFilters(regionId: string) : Promise<Filters>;
   getRegionsManagedBy(managerId: string) : Promise<Region[]>;
   setRegion(region: Region): Promise<IdObject>;
   deleteRegion(regionId: string): Promise<void>;
   getAllRegions(): Promise<Region[]>;
-  createEditRequest(add: EditRequest): Promise<IdObject>;
-  getEditRequestsForRegion(regionId: string, afterId?: string): Promise<EditRequest[]>;
-  getAllEditRequests(afterId?: string): Promise<EditRequest[]>;
   getEditRequestById(id: string): Promise<EditRequest | null>;
+  getAllEditRequests(pageSize: number, afterId?: string): Promise<EditRequest[]>;
+  getEditRequestsForRegion(regionId: string, pageSize: number, afterId?: string): Promise<EditRequest[]>;
+  getEditRequestsByStatus(status: string, pageSize: number, afterId?: string): Promise<EditRequest[]>;
+  getEditRequestsByUser(userAppId: string, pageSize: number, afterId?: string): Promise<EditRequest[]>;
+  createEditRequest(add: EditRequest): Promise<IdObject>;
   updateEditRequest(body: EditRequest): Promise<EditRequest>;
-  getEditRequestsByStatus(status: string, afterId?: string): Promise<EditRequest[]>;
-  getEditRequestsByUser(userAppId: string, afterId?: string): Promise<EditRequest[]>;
-  getAllBusinesses(afterId?: string): Promise<Business[]>;
 }
 
 export class ProductionDataLayer implements DataLayer {
@@ -189,29 +189,29 @@ export class ProductionDataLayer implements DataLayer {
     }
   }
 
-  async getAllEditRequests(afterId?: string): Promise<EditRequest[]> {
+  async getAllEditRequests(pageSize: number, afterId?: string): Promise<EditRequest[]> {
     let query = this.firestore.collection("editRequests");
-    return await this.getPaginatedEditRequests(query, afterId);
+    return await this.getPaginatedEditRequests(query, pageSize, afterId);
   }
 
-  async getEditRequestsForRegion(regionId: string, afterId?: string) : Promise<EditRequest[]> {
+  async getEditRequestsForRegion(regionId: string, pageSize: number,afterId?: string) : Promise<EditRequest[]> {
     let query = this.firestore.collection("editRequests").where("regionId", "==", regionId);
-    return this.getPaginatedEditRequests(query, afterId);
+    return this.getPaginatedEditRequests(query, pageSize, afterId);
   }
 
-  async getEditRequestsByStatus(status: string, afterId?: string): Promise<EditRequest[]> {
+  async getEditRequestsByStatus(status: string, pageSize: number, afterId?: string): Promise<EditRequest[]> {
     let query = this.firestore.collection("editRequests").where("status", "==", status);
-    return await this.getPaginatedEditRequests(query, afterId);
+    return await this.getPaginatedEditRequests(query, pageSize, afterId);
   }
 
-  async getEditRequestsByUser(userAppId: string, afterId?: string): Promise<EditRequest[]> {
+  async getEditRequestsByUser(userAppId: string, pageSize: number, afterId?: string): Promise<EditRequest[]> {
     let query = this.firestore.collection("editRequests").where("submitter", "==", userAppId);
-    return this.getPaginatedEditRequests(query, afterId);
+    return this.getPaginatedEditRequests(query, pageSize, afterId);
   }
 
-  private async getPaginatedEditRequests(query: firebase.firestore.Query<firebase.firestore.DocumentData>, afterId: string | undefined) {
+  private async getPaginatedEditRequests(query: firebase.firestore.Query<firebase.firestore.DocumentData>, pageSize: number, afterId: string | undefined) {
     let requests: EditRequest[] = [];
-    query = query.orderBy("dateSubmitted", 'desc').limit(PAGE_SIZE);
+    query = query.orderBy("dateSubmitted", 'desc').limit(pageSize);
     if (!!afterId) {
       let afterRecord = await this.firestore.collection("editRequests").doc(afterId).get();
       query = query.startAfter(afterRecord);
