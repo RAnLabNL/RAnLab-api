@@ -33,6 +33,7 @@ describe("Production Data Layer Integration Tests", () => {
   let regionId : string;
 
   beforeEach(async(done) => {
+    jest.setTimeout(30000);
     (await testFirestore.collection("businesses").get()).docs.forEach((biz) => biz.ref.delete());
     (await testFirestore.collection("years").get()).docs.forEach(yr => yr.ref.delete());
     (await testFirestore.collection("editRequests").get()).docs.forEach(req => req.ref.delete());
@@ -42,6 +43,7 @@ describe("Production Data Layer Integration Tests", () => {
   });
 
   it("Creates, retrieves, updates, and deletes businesses while maintaining correct region filter data", async (done) => {
+    jest.setTimeout(10000);
     let biz : Business = {
       employees: 1,
       name: "DummyBiz",
@@ -86,6 +88,7 @@ describe("Production Data Layer Integration Tests", () => {
   });
 
   it("Creates, retrieves, updates, and deletes regions", async (done) => {
+    jest.setTimeout(10000);
     let region: Region = {
       name: DUMMY_REGION_1,
       manager: "Dummy Manager"
@@ -127,6 +130,7 @@ describe("Production Data Layer Integration Tests", () => {
   });
 
   it("Creates, retrieves, and updates edit requests", async(done) => {
+    jest.setTimeout(10000);
     let region: Region = {
       name: DUMMY_REGION_1,
       manager: "Dummy Manager"

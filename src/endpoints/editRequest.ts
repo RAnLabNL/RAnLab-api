@@ -15,6 +15,7 @@ export interface EditRequest {
   id?: string,
   regionId: string,
   submitter?: string,
+  reviewer?: string,
   dateSubmitted?: Date | string,
   dateUpdated?: Date | string
   status?: string,
@@ -149,10 +150,22 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
         reply.unauthorized("Only administrators and managers may update edit requests!");
         return;
       } else {
-        return {
+        if(!!request.body.status) {
+          let currentRequest = await dataLayer.getEditRequestById(request.params.id);
+          if (currentRequest?.status !== request.body.status) {
+            if (!currentRequest?.reviewer) {
+              request.body.reviewer = userAppId;
+            } else {
+              reply.forbidden("Cannot edit the status of a request after review has been started!")
+              return;
+            }
+          }
+        }
+        let response = {
           status: "ok",
           editRequest: await dataLayer.updateEditRequest({...request.body, id: request.params.id})
-        };
+        }
+        return JSON.stringify(response);
       }
     }
   );

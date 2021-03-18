@@ -4,8 +4,9 @@ import {Region} from "../../src/database/productionDataLayer";
 import {getMockToken} from "./testify";
 
 const dummyManager = "DummyManagerId";
+export const dummyAdminId = "admin";
 export const dummyRegionManagerToken = getMockToken({userAppId: dummyManager, admin: false})
-export const dummyAdminToken = getMockToken({userAppId: "admin", admin: true});
+export const dummyAdminToken = getMockToken({userAppId: dummyAdminId, admin: true});
 
 export const DummyRegion: Region = {
   name: "DummyRegion",
@@ -34,7 +35,7 @@ export async function dummyTokenVerifier (req: FastifyRequest) {
     return {userAppId: "", admin: false};
   }
   if(req.headers.authorization.indexOf(dummyAdminToken) > 0) {
-    return {userAppId: "admin", admin: true};
+    return {userAppId: dummyAdminId, admin: true};
   } else if (req.headers.authorization?.indexOf(dummyRegionManagerToken) > 0) {
     return {userAppId: DummyRegion.manager, admin: false};
   } else {

@@ -2,6 +2,7 @@ import {DummyDatalayer} from "./testUtils/testDataLayer";
 import { testify} from "./testUtils/testify";
 import {createEditEndpoint, EditRequest, DEFAULT_PAGE_SIZE} from "../src/endpoints/editRequest";
 import {
+  dummyAdminId,
   dummyAdminToken,
   DummyBiz,
   DummyRegion,
@@ -135,7 +136,13 @@ describe("Edit Request unit tests", () => {
     expect(adminResponse.statusCode).toBe(200);
     expect(JSON.parse(adminResponse.payload).editRequests).toStrictEqual(
       arrayContaining([
-        objectContaining({...DummyAdd, id: id1, status: "Reviewed", dateSubmitted: any(String), dateUpdated: any(String)}),
+        objectContaining({
+          ...DummyAdd,
+          id: id1,
+          status: "Reviewed",
+          reviewer: dummyAdminId,
+          dateSubmitted: any(String),
+          dateUpdated: any(String)})
       ])
     );
 
@@ -190,7 +197,8 @@ describe("Edit Request unit tests", () => {
 
     const updatedRequest = asResponse({
       ...createdRequest,
-      status: "Approved"
+      status: "Approved",
+      reviewer: dummyAdminId
     });
     expect(JSON.parse(updateResponse.payload).editRequest).toStrictEqual(objectContaining(updatedRequest));
 
@@ -281,7 +289,7 @@ describe("Edit Request unit tests", () => {
   }
 
   async function updateEditRequestStatus(id: string, newStatus: string, token: string) : Promise<any> {
-    return testApp.inject({
+    let temp = await testApp.inject({
       method: "POST",
       url: `/edits/${id}`,
       payload: {status: newStatus},
@@ -289,6 +297,7 @@ describe("Edit Request unit tests", () => {
         authorization: `Bearer ${token}`
       }
     });
+    return temp;
   }
 
   async function getEditRequestsByRegion(regionId: string, token: string) {
