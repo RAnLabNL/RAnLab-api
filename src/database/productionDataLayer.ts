@@ -25,10 +25,11 @@ export interface Filters {
 }
 
 export interface DataLayer {
-  setBusiness(business: Business) : Promise<IdObject>;
   getBusinessById(id: string): Promise<Business | null>;
   getAllBusinesses(afterId?: string): Promise<Business[]>;
   getBusinessesByRegion(region: string): Promise<Business[]>;
+  setBusiness(business: Business) : Promise<IdObject>;
+  deleteBusiness(id: string): Promise<void>;
   getFilters(regionId: string) : Promise<Filters>;
   getRegionsManagedBy(managerId: string) : Promise<Region[]>;
   setRegion(region: Region): Promise<IdObject>;
@@ -41,6 +42,7 @@ export interface DataLayer {
   getEditRequestsByUser(userAppId: string, pageSize: number, afterId?: string): Promise<EditRequest[]>;
   createEditRequest(add: EditRequest): Promise<IdObject>;
   updateEditRequest(body: EditRequest): Promise<EditRequest>;
+
 }
 
 export class ProductionDataLayer implements DataLayer {
@@ -71,7 +73,6 @@ export class ProductionDataLayer implements DataLayer {
     }
     return this.convertToBusinesses((await query.get()).docs);
   }
-
 
   async setBusiness(newBusinessData: Business) : Promise<IdObject> {
     const bc = this.firestore.collection("businesses");
@@ -108,6 +109,29 @@ export class ProductionDataLayer implements DataLayer {
     }).then(() => <IdObject>{id: businessRef.id});
   }
 
+  async deleteBusiness(id: string) {
+    await this.firestore.runTransaction(
+      async transaction => {
+        let businessRef = this.firestore.collection("businesses").doc(id);
+        let businessDoc = await transaction.get(businessRef);
+        let businessData = businessDoc.data();
+        if (!!businessData) {
+          if (!!businessData.regionId) {
+            let deleteBizFromFilter = {
+              years: [{year: businessData.year_added, count: -1}],
+              industries: [{industry: businessData.industry, count: -1}]
+            }
+
+            await this.updateRegionFilters(businessData.regionId, deleteBizFromFilter, transaction);
+          }
+          await transaction.delete(businessRef);
+        }
+      }
+    );
+  }
+
+
+
   async getFilters(region: string) : Promise<Filters>{
     let regionData = (await this.firestore.collection("regions").doc(region).get()).data();
     regionData = !!regionData ? regionData : {};
@@ -134,27 +158,6 @@ export class ProductionDataLayer implements DataLayer {
 
   async deleteRegion(id: string): Promise<void> {
     await this.firestore.collection("regions").doc(id).delete();
-  }
-
-  async deleteBusiness(id: string) {
-    await this.firestore.runTransaction(
-      async transaction => {
-        let businessRef = this.firestore.collection("businesses").doc(id);
-        let businessDoc = await transaction.get(businessRef);
-        let businessData = businessDoc.data();
-        if (!!businessData) {
-          if (!!businessData.regionId) {
-            let deleteBizFromFilter = {
-              years: [{year: businessData.year_added, count: -1}],
-              industries: [{industry: businessData.industry, count: -1}]
-            }
-
-            await this.updateRegionFilters(businessData.regionId, deleteBizFromFilter, transaction);
-          }
-          await transaction.delete(businessRef);
-        }
-      }
-    );
   }
 
   async createEditRequest(editRequest: EditRequest): Promise<IdObject> {

@@ -1,6 +1,6 @@
 import {DummyDatalayer} from "./testUtils/testDataLayer";
 import { testify} from "./testUtils/testify";
-import {createEditEndpoint, EditRequest, DEFAULT_PAGE_SIZE} from "../src/endpoints/editRequest";
+import {createEditEndpoint, EditRequest, DEFAULT_PAGE_SIZE, previewAddId} from "../src/endpoints/editRequest";
 import {
   dummyAdminId,
   dummyAdminToken,
@@ -186,18 +186,18 @@ describe("Edit Request unit tests", () => {
     expect(submitResponse.statusCode).toBe(201);
     let createdRequest = {...DummyAdd, id: JSON.parse(submitResponse.payload).id};
 
-    const unauthorizedResponse = await updateEditRequestStatus(createdRequest.id, "Approved", "");
+    const unauthorizedResponse = await updateEditRequestStatus(createdRequest.id, "Reviewed", "");
     expect(unauthorizedResponse.statusCode).toBe(401);
 
-    const regionManagerResponse = await updateEditRequestStatus(createdRequest.id, "Approved", dummyRegionManagerToken);
+    const regionManagerResponse = await updateEditRequestStatus(createdRequest.id, "Reviewed", dummyRegionManagerToken);
     expect(regionManagerResponse.statusCode).toBe(401);
 
-    const updateResponse = await updateEditRequestStatus(createdRequest.id, "Approved", dummyAdminToken);
+    const updateResponse = await updateEditRequestStatus(createdRequest.id, "Reviewed", dummyAdminToken);
     expect(updateResponse.statusCode).toBe(200);
 
     const updatedRequest = asResponse({
       ...createdRequest,
-      status: "Approved",
+      status: "Reviewed",
       reviewer: dummyAdminId
     });
     expect(JSON.parse(updateResponse.payload).editRequest).toStrictEqual(objectContaining(updatedRequest));
@@ -210,7 +210,7 @@ describe("Edit Request unit tests", () => {
     done();
   });
 
-  it("Can show a preview of the records that would be changed by an edit request", async(done) => {
+  it("Implements Approval preview and workflow", async(done) => {
     async function createRegion(regionApp: FastifyInstance, region: Region) {
       let temp = await regionApp.inject({
         method: "POST",
@@ -234,37 +234,82 @@ describe("Edit Request unit tests", () => {
     const regionApp = createRegionsEndpoint(testApp, testDataLayer, dummyTokenVerifier);
     const bizApp = createBusinessesEndpoint(testApp, testDataLayer, dummyTokenVerifier);
     await createRegion(regionApp, DummyRegion);
-    let biz1 = {...DummyBiz, name: `UpdatingName`, employees: DummyBiz.employees + 10, industry: `OriginalIndustry}`};
-    let biz2 = {...DummyBiz, name: "Deleting"};
-    let {businessId: bizId1} = JSON.parse((await createBusiness(bizApp, biz1)).payload);
-    let {businessId: bizId2} = JSON.parse((await createBusiness(bizApp, biz2)).payload);
+    let updatedBiz = {...DummyBiz, name: `UpdatingName`, employees: DummyBiz.employees + 10, industry: `OriginalIndustry}`};
+    let deletedBiz = {...DummyBiz, name: "Deleting"};
+    let {businessId: updatedBizId} = JSON.parse((await createBusiness(bizApp, updatedBiz)).payload);
+    let {businessId: deletedBizId} = JSON.parse((await createBusiness(bizApp, deletedBiz)).payload);
+    updatedBiz.id = updatedBizId;
+    deletedBiz.id = deletedBizId;
     const request : EditRequest = {
       ...DummyAdd,
       updates: [{
-        id: bizId1,
+        id: updatedBizId,
         name: "UpdatedName",
         industry: "UpdatedIndustry"
       }],
-      deletes: [bizId2]
+      deletes: [deletedBizId]
     };
 
     let submitResponse = await submitEditRequest(request, DummyRegion.name, dummyRegionManagerToken);
     expect(submitResponse.statusCode).toBe(201);
-    let {id} = JSON.parse(submitResponse.payload);
+    let {id: editRequestId} = JSON.parse(submitResponse.payload);
 
-    let previewResponse = await getEditPreview(id, dummyAdminToken);
+    let previewResponse = await getEditPreview(editRequestId, dummyAdminToken);
     expect(previewResponse.statusCode).toBe(200);
     expect(JSON.parse(previewResponse.payload)).toStrictEqual(
       objectContaining({
-        added: arrayContaining([objectContaining({...DummyBiz, id: any(String)})]),
-        updated: arrayContaining([objectContaining({...biz1, id: bizId1, name: "UpdatedName", industry: "UpdatedIndustry"})]),
-        deleted: arrayContaining([objectContaining({...biz2, id: bizId2})])
+        added: arrayContaining([objectContaining({...DummyBiz, id: previewAddId})]),
+        updated: arrayContaining([objectContaining({...updatedBiz, name: "UpdatedName", industry: "UpdatedIndustry"})]),
+        deleted: arrayContaining([objectContaining({...deletedBiz})])
       })
     );
+
+    let postPreviewResponse = await getBusinessesByRegion(bizApp, DummyBiz.regionId);
+    expect(JSON.parse(postPreviewResponse.payload).businesses).toStrictEqual(arrayContaining([
+      updatedBiz,
+      deletedBiz
+    ]));
+
+    let approvalResponse = await updateEditRequestStatus(editRequestId, "Approved", dummyAdminToken);
+    let approvalPayload = JSON.parse(approvalResponse.payload);
+    expect(approvalPayload).toStrictEqual(
+      objectContaining({
+        added: any(Object),
+        updated: any(Object),
+        deleted: any(Object),
+        editRequest: objectContaining({
+          status: "Approved",
+          submitter: DummyRegion.manager,
+          reviewer: dummyAdminId,
+          dateSubmitted: any(String),
+          dateUpdated: any(String)
+        })
+      })
+    );
+    expect(approvalPayload.added).toStrictEqual(arrayContaining([objectContaining({...DummyBiz, id: any(String)})]));
+    expect(approvalPayload.updated).toStrictEqual(arrayContaining([objectContaining({...updatedBiz, name: "UpdatedName", industry: "UpdatedIndustry"})]));
+    expect(approvalPayload.deleted).toStrictEqual(arrayContaining([objectContaining({...deletedBiz})]));
+
+    let postApprovalResponse = await getBusinessesByRegion(regionApp, DummyBiz.regionId);
+    let businesses = JSON.parse(postApprovalResponse.payload).businesses;
+    expect(businesses).toStrictEqual(arrayContaining([
+      {...updatedBiz, name: "UpdatedName", industry: "UpdatedIndustry"},
+      {...DummyBiz, id: any(String)}
+    ]));
+    expect(businesses.find((b:Business) => b.name === DummyBiz.name).id).not.toBe(previewAddId);
 
     await testApp.close();
     done();
   });
+
+  async function getBusinessesByRegion(bizEndpoint: FastifyInstance, regionId: string) {
+    return await bizEndpoint.inject({
+      method: "GET",
+      url: `/regions/${regionId}/businesses`,
+      headers: { Authorization: `Bearer ${dummyRegionManagerToken}` }
+    });
+  }
+
 
 
   async function getRequestById(requestId: string, token: string) : Promise<any> {

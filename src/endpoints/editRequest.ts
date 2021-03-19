@@ -10,6 +10,7 @@ import {
 } from "./docs/editRequestSchemas";
 
 export const DEFAULT_PAGE_SIZE = 25;
+export const previewAddId = "[preview-id]"
 
 export interface EditRequest {
   id?: string,
@@ -138,6 +139,7 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
       }
     }
   );
+
   app.post<UpdateEditRequest>(
     `/edits/:id`,
     {schema: updateEditRequestSchema},
@@ -158,6 +160,19 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
             } else {
               reply.forbidden("Cannot edit the status of a request after review has been started!")
               return;
+            }
+            if(request.body.status.toLowerCase() === "approved") {
+              let applied = await approveAndApplyEditRequest(request.params.id, userAppId);
+              if (applied) {
+                let response = {
+                  status: "ok",
+                  ...applied
+                };
+                return JSON.stringify(response);
+              } else {
+                reply.badRequest("Unable to process approval");
+                return;
+              }
             }
           }
         }
@@ -184,7 +199,7 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
         let deletedBusinesses: Business[] = [];
         let editRequest = await dataLayer.getEditRequestById(request.params.id);
         for(const add of editRequest?.adds || []) {
-          addedBusinesses.push({...add, id: "some-id"});
+          addedBusinesses.push({...add, id: previewAddId});
         }
         for (const update of editRequest?.updates || []) {
           let biz = await dataLayer.getBusinessById(update.id)
@@ -231,5 +246,49 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
       }
     }
   );
+
+  async function approveAndApplyEditRequest(id: string, reviewer: string) {
+    let addedBusinesses: Business[] = [];
+    let updatedBusinesses: Business[] = [];
+    let deletedBusinesses: Business[] = [];
+    let editRequest = await dataLayer.getEditRequestById(id);
+    if(!!editRequest) {
+      let editPromises = <Promise<any>[]>[];
+      for (const add of editRequest?.adds || []) {
+        editPromises.push(dataLayer.setBusiness(add));
+        addedBusinesses.push({...add, id: previewAddId});
+      }
+      for (const update of editRequest?.updates || []) {
+        let biz = await dataLayer.getBusinessById(update.id)
+        if (!!biz) {
+          let updatedBiz = {...biz, ...update};
+          editPromises.push(dataLayer.setBusiness(updatedBiz));
+          updatedBusinesses.push(updatedBiz);
+        }
+      }
+      for (const delId of editRequest?.deletes || []) {
+        let biz = await dataLayer.getBusinessById(delId);
+        if (!!biz) {
+          editPromises.push(dataLayer.deleteBusiness(delId));
+          deletedBusinesses.push(biz);
+        }
+      }
+
+      let updatedEditRequest = {...editRequest, status: "Approved", reviewer};
+      editPromises.push(dataLayer.updateEditRequest(updatedEditRequest))
+      await Promise.all(editPromises);
+      return {
+        added: addedBusinesses,
+        updated: updatedBusinesses,
+        deleted: deletedBusinesses,
+        editRequest: updatedEditRequest
+      }
+    } else {
+      return false;
+    }
+  }
+
+
   return app;
+
 }

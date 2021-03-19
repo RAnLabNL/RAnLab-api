@@ -3,7 +3,6 @@ import {Business, CHUNK_SIZE} from "../../src/endpoints/businesses";
 import {EditRequest} from "../../src/endpoints/editRequest";
 
 export class DummyDatalayer implements DataLayer {
-
   businesses: Business[] = [];
   regions: Region[] = [];
   editRequests: EditRequest[] = [];
@@ -22,9 +21,19 @@ export class DummyDatalayer implements DataLayer {
     return this.businesses.slice(startIndex, startIndex + CHUNK_SIZE);
   }
 
+  async deleteBusiness(id: string): Promise<void> {
+    let startIndex = this.businesses.findIndex(biz => biz.id === id);
+    startIndex = startIndex > 0 ? startIndex : 0;
+    this.businesses.splice(startIndex, 1);
+  }
+
   async setBusiness(business:Business): Promise<IdObject> {
-    let id = `${Math.random()}`;
-    this.businesses.push({...business, id});
+    if(!business.id) {
+      business.id = `${Math.random()}`;
+      this.businesses.push({...business});
+    } else {
+      this.businesses[this.businesses.findIndex(b => b.id == business.id)] = business;
+    }
     let regionIndex = this.regions.findIndex((r) => r.name == business.regionId);
     let bizRegion = this.regions[regionIndex]
     if(!bizRegion.filters) {
@@ -39,7 +48,7 @@ export class DummyDatalayer implements DataLayer {
     } else {
       bizRegion.filters.industries[industryIndex].count++;
     }
-    return {id};
+    return {id: business.id};
   }
 
   async getFilters(regionId: string): Promise<Filters> {
