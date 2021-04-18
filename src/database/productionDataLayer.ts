@@ -1,7 +1,14 @@
 import {Business, CHUNK_SIZE} from "../endpoints/businesses";
 import {EditRequest} from "../endpoints/editRequest";
-import firebase from "firebase";
-import Timestamp = firebase.firestore.Timestamp;
+import {
+  DocumentData, DocumentSnapshot,
+  FieldValue,
+  Firestore,
+  Query,
+  QueryDocumentSnapshot,
+  Timestamp,
+  Transaction
+} from "@google-cloud/firestore";
 
 export interface IdObject {
   id: string
@@ -46,8 +53,8 @@ export interface DataLayer {
 }
 
 export class ProductionDataLayer implements DataLayer {
-  firestore: firebase.firestore.Firestore;
-  constructor(firestore: firebase.firestore.Firestore) {
+  firestore: Firestore;
+  constructor(firestore: Firestore) {
     this.firestore = firestore;
   }
 
@@ -162,8 +169,8 @@ export class ProductionDataLayer implements DataLayer {
     let doc = this.firestore.collection("editRequests").doc();
     await doc.set({
       ...editRequest,
-      dateSubmitted: firebase.firestore.FieldValue.serverTimestamp(),
-      dateUpdated: firebase.firestore.FieldValue.serverTimestamp()
+      dateSubmitted: FieldValue.serverTimestamp(),
+      dateUpdated: FieldValue.serverTimestamp()
     });
     return {id :  doc.id};
   }
@@ -179,7 +186,7 @@ export class ProductionDataLayer implements DataLayer {
     let updatedRequestData = {
       ...this.convertToEditRequest(id, requestData),
       ...body,
-      dateUpdated: firebase.firestore.FieldValue.serverTimestamp()
+      dateUpdated: FieldValue.serverTimestamp()
     };
     await this.firestore.collection("editRequests").doc(id).update(updatedRequestData);
     let updatedRequest = await this.getEditRequestById(id);
@@ -210,7 +217,7 @@ export class ProductionDataLayer implements DataLayer {
     return this.getPaginatedEditRequests(query, pageSize, afterId);
   }
 
-  private async getPaginatedEditRequests(query: firebase.firestore.Query<firebase.firestore.DocumentData>, pageSize: number, afterId: string | undefined) {
+  private async getPaginatedEditRequests(query: Query, pageSize: number, afterId: string | undefined) {
     let requests: EditRequest[] = [];
     query = query.orderBy("dateSubmitted", 'desc').limit(pageSize);
     if (!!afterId) {
@@ -230,7 +237,7 @@ export class ProductionDataLayer implements DataLayer {
     return requests;
   }
 
-  convertToEditRequest(id: string, documentData: firebase.firestore.DocumentData | undefined) : EditRequest | null {
+  convertToEditRequest(id: string, documentData: DocumentData | undefined) : EditRequest | null {
     if(!!documentData) {
       let request = <EditRequest>documentData;
       request.dateSubmitted = (<Timestamp>(documentData.dateSubmitted)).toDate();
@@ -242,7 +249,7 @@ export class ProductionDataLayer implements DataLayer {
     }
   }
 
-  convertToBusinesses(docs: Array<firebase.firestore.QueryDocumentSnapshot<firebase.firestore.DocumentData>>) : Business[] {
+  convertToBusinesses(docs: Array<QueryDocumentSnapshot>) : Business[] {
     let businesses = [];
     for(let doc of docs) {
       let biz : Business = {
@@ -263,7 +270,7 @@ export class ProductionDataLayer implements DataLayer {
 
 
 
-  private async updateRegionFilters(regionId: string, filterUpdate: RegionFilters, transaction: firebase.firestore.Transaction) {
+  private async updateRegionFilters(regionId: string, filterUpdate: RegionFilters, transaction: Transaction) {
     let regionRef = this.firestore.collection("regions").doc(regionId);
     let regionDoc = await transaction.get(regionRef);
     if (!!regionDoc) {
@@ -314,7 +321,7 @@ export class ProductionDataLayer implements DataLayer {
     return {years, industries};
   }
 
-  private static getCurrentFilters(regionDoc: firebase.firestore.DocumentSnapshot<firebase.firestore.DocumentData>) : RegionFilters{
+  private static getCurrentFilters(regionDoc: DocumentSnapshot) : RegionFilters{
     let regionData = !!regionDoc && !!regionDoc.data() ? regionDoc.data() : {filters: {}};
     if(!!regionData) {
       return !!regionData.filters ? regionData.filters : {};

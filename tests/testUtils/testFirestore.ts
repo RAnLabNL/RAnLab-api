@@ -1,4 +1,4 @@
-import firebase from "firebase";
+import {Firestore} from "@google-cloud/firestore";
 
 // Because of some fun with quotas, I now have two possible test firestore targets, whee.
 /*
@@ -21,5 +21,4 @@ var firebaseConfig = {
   measurementId: "G-180MVEJXN2"
 };
 
-export const testApp = firebase.initializeApp(firebaseConfig);
-export const testFirestore = testApp.firestore();
+export const testFirestore = new Firestore(firebaseConfig);
