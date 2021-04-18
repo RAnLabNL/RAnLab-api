@@ -78,7 +78,7 @@ export interface UserInfoPatch {
   username?: string
 }
 
-async function getUserRole(userId: string) {
+async function getUserRole(userId: string) : Promise<{role:string}> {
   let app_metadata = (await getUserById(userId)).app_metadata;
   return {role: app_metadata.role};
 }
@@ -150,16 +150,16 @@ export async function getUserInfo(authHeader: string) {
   }
 }
 
-export type Auth0JwtVerifier = (request: FastifyRequest) => Promise<{userAppId: string, admin: boolean}>;
+export type Auth0JwtVerifier = (request: FastifyRequest) => Promise<{userAppId: string, admin: boolean, role: string}>;
 export async function verifyJwt(request: FastifyRequest) {
   let authHeader = !request.headers.authorization ? "" : request.headers.authorization
   if(!authHeader) {
-    return {userAppId: "", admin: false};
+    return {userAppId: "", admin: false, role: ""};
   } else {
     let {userId} = await getUserInfo(authHeader);
     let {role} = await getUserRole(userId);
     let admin: boolean = role === "admin"
     let userAppId = userId.indexOf("|") > 0 ? userId.split("|")[1] : userId;
-    return {userAppId, admin};
+    return {userAppId, admin, role};
   }
 }

@@ -247,7 +247,10 @@ describe("Edit Request unit tests", () => {
         name: "UpdatedName",
         industry: "UpdatedIndustry"
       }],
-      deletes: [deletedBizId]
+      deletes: [{
+        id: deletedBizId,
+        ...deletedBiz
+      }]
     };
 
     let submitResponse = await submitEditRequest(request, DummyRegion.name, dummyRegionManagerToken);
@@ -310,8 +313,6 @@ describe("Edit Request unit tests", () => {
     });
   }
 
-
-
   async function getRequestById(requestId: string, token: string) : Promise<any> {
     return await editEndpoint.inject({
       method: "GET",
@@ -326,9 +327,9 @@ describe("Edit Request unit tests", () => {
       url: `/region/${regionId}/edits`,
       payload: request,
       headers: {}
-    }
+    };
     if(!!token) {
-      postOptions.headers = {authorization: `Bearer ${token}`}
+      postOptions.headers = {authorization: `Bearer ${token}`};
     }
     return await editEndpoint.inject(postOptions);
   }

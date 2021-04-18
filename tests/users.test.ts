@@ -6,6 +6,7 @@ describe("Auth0 user endpoint tests", () => {
   let userAccessToken: string;
   let adminAccessToken: string;
   it("Can get all users as regular or admin user", async (done) => {
+    jest.setTimeout(15000);
     async function getAllUsers(token:string) {
       return await userApp.inject({
         method: "GET",
@@ -36,6 +37,7 @@ describe("Auth0 user endpoint tests", () => {
   });
 
   it("Can get single user by ID as regular or admin user", async (done) => {
+    jest.setTimeout(15000);
     async function getUserById(id: string, token:string) {
       return await userApp.inject({
         method: "GET",
@@ -64,6 +66,7 @@ describe("Auth0 user endpoint tests", () => {
   });
 
   it("Can update a user as an admin but not a regular user", async (done) => {
+    jest.setTimeout(15000);
     async function updateUser(id: string, updated: string, token:string) {
       return await userApp.inject({
         method: "POST",

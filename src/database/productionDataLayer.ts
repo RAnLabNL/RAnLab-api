@@ -32,9 +32,9 @@ export interface DataLayer {
   deleteBusiness(id: string): Promise<void>;
   getFilters(regionId: string) : Promise<Filters>;
   getRegionsManagedBy(managerId: string) : Promise<Region[]>;
+  getAllRegions(): Promise<Region[]>;
   setRegion(region: Region): Promise<IdObject>;
   deleteRegion(regionId: string): Promise<void>;
-  getAllRegions(): Promise<Region[]>;
   getEditRequestById(id: string): Promise<EditRequest | null>;
   getAllEditRequests(pageSize: number, afterId?: string): Promise<EditRequest[]>;
   getEditRequestsForRegion(regionId: string, pageSize: number, afterId?: string): Promise<EditRequest[]>;
@@ -129,8 +129,6 @@ export class ProductionDataLayer implements DataLayer {
       }
     );
   }
-
-
 
   async getFilters(region: string) : Promise<Filters>{
     let regionData = (await this.firestore.collection("regions").doc(region).get()).data();

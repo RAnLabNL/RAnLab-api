@@ -54,8 +54,10 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
           date: Date.now(),
           regions: <Region[]>[]
         };
-        if (admin || userAppId == request.params.managerId) {
-          response.regions.push(...(await dataLayer.getRegionsManagedBy(request.params.managerId)));
+        if (admin && userAppId == request.params.managerId) {
+          response.regions.push(...(await dataLayer.getAllRegions()));
+        } else if (admin || userAppId == request.params.managerId) {
+            response.regions.push(...(await dataLayer.getRegionsManagedBy(request.params.managerId)));
         }
         return JSON.stringify(response);
       }

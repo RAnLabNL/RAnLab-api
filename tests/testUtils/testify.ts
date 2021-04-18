@@ -61,7 +61,7 @@ export function getMockToken(payload: {userAppId: string, admin: boolean  }) {
 }
 
 export function getTestJwtVerifier(userAppId: string, admin: boolean) {
-  return async(_: FastifyRequest) => ({userAppId, admin});
+  return async(_: FastifyRequest) => ({userAppId, admin, role: admin ? "admin" : "region" });
 }
 
 export const testify = () => {

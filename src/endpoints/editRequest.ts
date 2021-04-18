@@ -22,7 +22,7 @@ export interface EditRequest {
   status?: string,
   adds?: Business[],
   updates?: BusinessUpdate[],
-  deletes?: string[]
+  deletes?: BusinessUpdate[]
 }
 
 interface CreateEditRequest extends AuthenticatedRequestByRegionId {
@@ -207,8 +207,8 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
             updatedBusinesses.push({...biz, ...update});
           }
         }
-        for (const delId of editRequest?.deletes || []) {
-          let biz = await dataLayer.getBusinessById(delId);
+        for (const deleted of editRequest?.deletes || []) {
+          let biz = await dataLayer.getBusinessById(deleted.id);
           if(!!biz) {
             deletedBusinesses.push(biz);
           }
@@ -266,10 +266,10 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
           updatedBusinesses.push(updatedBiz);
         }
       }
-      for (const delId of editRequest?.deletes || []) {
-        let biz = await dataLayer.getBusinessById(delId);
+      for (const deleted of editRequest?.deletes || []) {
+        let biz = await dataLayer.getBusinessById(deleted.id);
         if (!!biz) {
-          editPromises.push(dataLayer.deleteBusiness(delId));
+          editPromises.push(dataLayer.deleteBusiness(deleted.id));
           deletedBusinesses.push(biz);
         }
       }

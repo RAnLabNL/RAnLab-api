@@ -32,12 +32,12 @@ export const DummyBizUpdate: BusinessUpdate = {
 
 export async function dummyTokenVerifier (req: FastifyRequest) {
   if(!req.headers.authorization || !req.headers.authorization.split("Bearer")[1].trim()) {
-    return {userAppId: "", admin: false};
+    return {userAppId: "", admin: false, role: ""};
   }
   if(req.headers.authorization.indexOf(dummyAdminToken) > 0) {
-    return {userAppId: dummyAdminId, admin: true};
+    return {userAppId: dummyAdminId, admin: true, role: "admin"};
   } else if (req.headers.authorization?.indexOf(dummyRegionManagerToken) > 0) {
-    return {userAppId: DummyRegion.manager, admin: false};
+    return {userAppId: DummyRegion.manager, admin: false, role: "region"};
   } else {
     throw new Error("Unrecognized token");
   }

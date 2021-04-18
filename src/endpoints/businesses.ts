@@ -1,7 +1,6 @@
 import type {FastifyInstance, RequestGenericInterface} from 'fastify';
 import {DataLayer, Filters} from "../database/productionDataLayer";
-import firebase from "firebase";
-import GeoPoint = firebase.firestore.GeoPoint;
+import {GeoPoint} from "@google-cloud/firestore";
 import {createBizSchema, exportBusinessesSchema, getBizSchema, updateBizSchema} from "./docs/businessesSchemas";
 import {isRegionManager} from "../utils";
 import {Auth0JwtVerifier} from "../auth0";
@@ -56,7 +55,7 @@ export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLa
   app.get<AuthenticatedRequestByRegionId>(
     '/regions/:regionId/businesses',
     {schema: getBizSchema},
-    async (request, reply) => {
+    async (request  , reply) => {
 
       let {userAppId, admin} = await verifyJwt(request)
       if(!(admin || await isRegionManager(userAppId, request.params.regionId, dataLayer))) {
@@ -77,7 +76,6 @@ export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLa
       }
     }
   );
-
 
   app.post<CreateBusinessRequest>(
     '/regions/:regionId/businesses',

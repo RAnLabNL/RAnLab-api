@@ -19,7 +19,7 @@ export default function createUsersEndpoint(app: FastifyInstance, verifyJwt: Aut
     '/users/:id',
     {schema: getUserInfoRequestSchema},
     async (request, reply) => {
-      let {userAppId, admin} = await verifyJwt(request);
+      let {userAppId, admin, role} = await verifyJwt(request);
       if (!userAppId) {
         reply.unauthorized("Only authenticated users can access this information");
         return;
@@ -29,7 +29,7 @@ export default function createUsersEndpoint(app: FastifyInstance, verifyJwt: Aut
           date: Date.now(),
           userInfo: <Auth0UserInfo>{}
         };
-        if (admin || userAppId == request.params.id) {
+        if (admin || role == "region") {
           response.userInfo = await getUserById(userAppId);
         }
         return JSON.stringify(response);

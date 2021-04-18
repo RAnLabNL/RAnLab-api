@@ -23,7 +23,7 @@ import { businessSchema} from './businessesSchemas';
     },
     deletes: {
       type: 'array',
-      items: {type: 'string'}
+      items: businessSchema
     }
   }
 }

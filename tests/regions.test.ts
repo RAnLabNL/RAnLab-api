@@ -9,7 +9,7 @@ import {
   DummyRegion,
   dummyRegionManagerToken,
   getRegionsByDummyManager,
-  dummyTokenVerifier
+  dummyTokenVerifier, dummyAdminId
 } from "./testUtils/dummyData";
 import {Region} from "../src/database/productionDataLayer";
 import {FastifyInstance} from "fastify";
@@ -42,6 +42,13 @@ describe("Region Endpoint Tests", () => {
       expect(response.statusCode).toBe(200);
       expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([...testRegions.filter(r => r.manager == region.manager)]));
     }
+    const response = await app.inject({
+      method: 'GET',
+      headers: {authorization: `Bearer ${dummyAdminToken}`},
+      url: `/regions/manager/${dummyAdminId}`
+    });
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([...testRegions]));
     await app.close();
     done();
   });
