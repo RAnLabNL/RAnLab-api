@@ -11,9 +11,12 @@ import {
 } from "./testUtils/dummyData";
 import createRegionsEndpoint from "../src/endpoints/regions";
 import {setupAuth0TestEnv, testify} from "./testUtils/testify";
+import {FastifyInstance} from "fastify";
 
 describe("Filter Endpoint Tests", () => {
   let testDataLayer: DummyDatalayer;
+  const CREATED_INDUSTRY = 'Created Industry';
+  let DEFAULT_INDUSTRIES = [DummyBiz.industry, `Not ${DummyBiz.industry}`, CREATED_INDUSTRY];
 
   beforeAll(async (done) => {
     setupAuth0TestEnv();
@@ -21,6 +24,7 @@ describe("Filter Endpoint Tests", () => {
     const server = testify();
     const regionsApp = createRegionsEndpoint(server, testDataLayer, dummyTokenVerifier);
     const bizApp = createBusinessesEndpoint(server, testDataLayer, dummyTokenVerifier);
+    const filterApp = createFiltersEndpoint(server, testDataLayer,  dummyTokenVerifier);
 
     await createDummyRegion(regionsApp);
     let notDummyRegion = {...DummyRegion};
@@ -40,10 +44,11 @@ describe("Filter Endpoint Tests", () => {
       industry: `Not ${DummyBiz.industry}`,
       year_added: DummyBiz.year_added + 1
     });
+    await createGlobalIndustry(filterApp, CREATED_INDUSTRY);
     done();
   });
 
-  it('Returns only the region-specific filter data', async (done) => {
+  it('Region-specific filter data is correct', async (done) => {
     const server = testify();
     const filterApp = createFiltersEndpoint(server, testDataLayer,  dummyTokenVerifier);
     const filterResponse  = await filterApp.inject({
@@ -64,35 +69,78 @@ describe("Filter Endpoint Tests", () => {
     done();
   });
 
-  it("Gets all industries for admin users", async (done) => {
+  it("Global list contains all industries for admin and non-admin users", async (done) => {
     const server = testify();
     const filterApp = createFiltersEndpoint(server, testDataLayer, dummyTokenVerifier);
-    const industriesResponse = await filterApp.inject({
+    const adminResponse = await filterApp.inject({
       method: 'GET',
       url: `/filters/industries`,
       headers: {authorization: `Bearer ${dummyAdminToken}`}
     });
-    expect(industriesResponse.statusCode).toBe(200);
-    expect(JSON.parse(industriesResponse.payload).industries).toStrictEqual(
-      expect.arrayContaining([
-          DummyBiz.industry,
-          `Not ${DummyBiz.industry}`
-        ])
-      );
-    await filterApp.close();
-    done();
-  });
+    expect(adminResponse.statusCode).toBe(200);
+    expect(JSON.parse(adminResponse.payload).industries).toStrictEqual(DEFAULT_INDUSTRIES);
 
-  it("Denies all industries for non-admin users", async (done) => {
-    const server = testify();
-    const filterApp = createFiltersEndpoint(server, testDataLayer, dummyTokenVerifier);
-    const industriesResponse = await filterApp.inject({
+    const nonAdminResponse = await filterApp.inject({
       method: 'GET',
       url: `/filters/industries`,
       headers: {authorization: `Bearer ${dummyRegionManagerToken}`}
     });
-    expect(industriesResponse.statusCode).toBe(401);
+    expect(nonAdminResponse.statusCode).toBe(200);
+    expect(JSON.parse(nonAdminResponse.payload).industries).toStrictEqual(
+      expect.arrayContaining([
+        DummyBiz.industry,
+        `Not ${DummyBiz.industry}`
+      ])
+    );
     await filterApp.close();
     done();
   });
+
+  it("Can add and remove industries from the global list", async (done) => {
+    const server = testify();
+    const filterApp = createFiltersEndpoint(server, testDataLayer, dummyTokenVerifier);
+    const SECOND_INDUSTRY = "SECOND";
+    let createResponse = await createGlobalIndustry(filterApp, SECOND_INDUSTRY);
+
+    expect(createResponse.statusCode).toBe(200);
+    const getAfterCreate = await filterApp.inject({
+      method: 'GET',
+      url: `/filters/industries`,
+      headers: {authorization: `Bearer ${dummyRegionManagerToken}`}
+    });
+    expect(getAfterCreate.statusCode).toBe(200);
+    expect(JSON.parse(getAfterCreate.payload).industries).toStrictEqual(expect.arrayContaining([CREATED_INDUSTRY, SECOND_INDUSTRY ]));
+
+    const deleteResponse = await filterApp.inject({
+      method: 'DELETE',
+      url: `/filters/industries`,
+      payload: {industries: [CREATED_INDUSTRY]},
+      headers: {authorization: `Bearer ${dummyAdminToken}`}
+    });
+
+    expect(deleteResponse.statusCode).toBe(200);
+    const getAfterDelete = await filterApp.inject({
+      method: 'GET',
+      url: `/filters/industries`,
+      headers: {authorization: `Bearer ${dummyRegionManagerToken}`}
+    });
+    expect(getAfterDelete.statusCode).toBe(200);
+    expect(JSON.parse(getAfterDelete.payload).industries).toStrictEqual(
+      expect.not.arrayContaining([
+        CREATED_INDUSTRY
+      ])
+    );
+
+    await filterApp.close();
+    done();
+  });
+
+  async function createGlobalIndustry(filterApp: FastifyInstance, globalIndustry: string) {
+    return await filterApp.inject({
+      method: 'POST',
+      url: `/filters/industries`,
+      payload: {industries: [globalIndustry]},
+      headers: {authorization: `Bearer ${dummyAdminToken}`}
+    });
+  }
 });

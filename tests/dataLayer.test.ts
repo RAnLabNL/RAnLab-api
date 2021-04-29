@@ -285,6 +285,32 @@ describe("Production Data Layer Integration Tests", () => {
     done();
   });
 
+  describe("Filter data layer tests", () => {
+    beforeEach(async (done) => {
+      let industryRecords = (await productionDataLayer.firestore.collection("industries").get()).docs;
+      for(let i = 0; i < industryRecords.length; i++) {
+        await industryRecords[i].ref.delete();
+      }
+      done();
+    });
+
+    it("Creates and deletes industries", async(done) => {
+      const TEST_INDUSTRY = 'testIndustry';
+      await productionDataLayer.addIndustries([TEST_INDUSTRY]);
+      let {industries: industriesAfterCreate} = await productionDataLayer.getFilters();
+      expect(industriesAfterCreate).toStrictEqual(
+        expect.arrayContaining([TEST_INDUSTRY])
+      );
+
+      await productionDataLayer.deleteIndustries([TEST_INDUSTRY]);
+      let {industries: industriesAfterDelete} = await productionDataLayer.getFilters();
+      expect(industriesAfterDelete).toStrictEqual([]);
+
+      done();
+    })
+
+  })
+
   describe("Long running test", ()=> {
     afterEach(async(done) => {
       (await testFirestore.collection("businesses").get()).docs.forEach((biz) => biz.ref.delete());
@@ -327,6 +353,5 @@ describe("Production Data Layer Integration Tests", () => {
 
       done();
     });
-
-  })
+  });
 });

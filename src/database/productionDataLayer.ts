@@ -37,7 +37,7 @@ export interface DataLayer {
   getBusinessesByRegion(region: string): Promise<Business[]>;
   setBusiness(business: Business) : Promise<IdObject>;
   deleteBusiness(id: string): Promise<void>;
-  getFilters(regionId: string) : Promise<Filters>;
+  getFilters(regionId?: string) : Promise<Filters>;
   getRegionsManagedBy(managerId: string) : Promise<Region[]>;
   getAllRegions(): Promise<Region[]>;
   setRegion(region: Region): Promise<IdObject>;
@@ -49,7 +49,8 @@ export interface DataLayer {
   getEditRequestsByUser(userAppId: string, pageSize: number, afterId?: string): Promise<EditRequest[]>;
   createEditRequest(add: EditRequest): Promise<IdObject>;
   updateEditRequest(body: EditRequest): Promise<EditRequest>;
-
+  addIndustries(industries: string[]): Promise<void>;
+  deleteIndustries(industries: string[]) : Promise<any[]>;
 }
 
 export class ProductionDataLayer implements DataLayer {
@@ -137,10 +138,17 @@ export class ProductionDataLayer implements DataLayer {
     );
   }
 
-  async getFilters(region: string) : Promise<Filters>{
-    let regionData = (await this.firestore.collection("regions").doc(region).get()).data();
-    regionData = !!regionData ? regionData : {};
-    return regionData.filters;
+  async getFilters(region?: string) : Promise<Filters>{
+    if(!!region) {
+      let regionData = (await this.firestore.collection("regions").doc(region).get()).data();
+      regionData = !!regionData ? regionData : {};
+      return regionData.filters;
+    } else {
+      let industries: string[] = [];
+      let industryData = (await this.firestore.collection("industries").get()).docs;
+      industryData.forEach(i => industries.push(i.id));
+      return {industries};
+    }
   }
 
   async getAllRegions() : Promise<Region[]> {
@@ -217,6 +225,21 @@ export class ProductionDataLayer implements DataLayer {
     return this.getPaginatedEditRequests(query, pageSize, afterId);
   }
 
+  async addIndustries(industries: string[]): Promise<void> {
+    industries.forEach(
+      i => this.firestore.collection("industries").doc(i).set({active: true})
+    );
+  }
+
+  async deleteIndustries(industries: string[]) : Promise<any[]>{
+    let promises: Promise<any>[] = []
+    for(let i = 0; i < industries.length; i++) {
+      promises.push(this.firestore.collection("industries").doc(industries[i]).delete());
+    }
+    return Promise.all(promises);
+  }
+
+
   private async getPaginatedEditRequests(query: Query, pageSize: number, afterId: string | undefined) {
     let requests: EditRequest[] = [];
     query = query.orderBy("dateSubmitted", 'desc').limit(pageSize);
@@ -267,8 +290,6 @@ export class ProductionDataLayer implements DataLayer {
     }
     return businesses;
   }
-
-
 
   private async updateRegionFilters(regionId: string, filterUpdate: RegionFilters, transaction: Transaction) {
     let regionRef = this.firestore.collection("regions").doc(regionId);
@@ -329,5 +350,6 @@ export class ProductionDataLayer implements DataLayer {
       return {};
     }
   }
+
 }
 

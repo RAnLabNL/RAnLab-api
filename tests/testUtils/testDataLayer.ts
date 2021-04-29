@@ -6,6 +6,7 @@ export class DummyDatalayer implements DataLayer {
   businesses: Business[] = [];
   regions: Region[] = [];
   editRequests: EditRequest[] = [];
+  industries: string[] = [];
 
   async getBusinessById(id: string): Promise<Business | null> {
     return this.businesses.find((b) => b.id === id) || null;
@@ -52,10 +53,14 @@ export class DummyDatalayer implements DataLayer {
   }
 
   async getFilters(regionId: string): Promise<Filters> {
-    return {
-      years: this.businesses.filter(b => b.regionId=== regionId).map((b) => b.year_added),
-      industries: this.businesses.filter(b => b.regionId=== regionId).map((b) => b.industry)
-    };
+    if(!regionId) {
+      return {industries: this.industries};
+    } else {
+      return {
+        years: this.businesses.filter(b => b.regionId === regionId).map((b) => b.year_added),
+        industries: this.businesses.filter(b => b.regionId === regionId).map((b) => b.industry)
+      };
+    }
   }
 
   async setRegion(region: Region): Promise<IdObject> {
@@ -107,6 +112,15 @@ export class DummyDatalayer implements DataLayer {
     return this.editRequests[index];
   }
 
+  async addIndustries(industries: string[]): Promise<void> {
+    this.industries.push(...industries);
+  }
+
+  async deleteIndustries(industries: string[]): Promise<any[]> {
+    this.industries = this.industries.filter(i => !industries.find(i2 => i2 === i));
+    return Promise.resolve([]);
+  }
+
   getPaginatedEditRequests(pageSize: number, afterId: string | undefined, filter: (r: EditRequest) => boolean) {
     this.editRequests.reverse();
     let startIndex = !!afterId? this.editRequests.findIndex((r) => r.id === afterId) + 1 : 0;
@@ -118,4 +132,5 @@ export class DummyDatalayer implements DataLayer {
   clearRegions() {
     this.regions = [];
   }
+
 }

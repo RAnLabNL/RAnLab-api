@@ -15,6 +15,18 @@ export const filtersSchema = {
   }
 }
 
+let industryListSchema = {
+  type: 'object',
+  properties: {
+    industries: {
+      type: 'array',
+      items: {
+        type: 'string'
+      }
+    }
+  }
+};
+
 export const getFilterSchema = {
   description: 'Endpoint for interacting directly with filters for a particular region',
   params: byRegionIdSchema,
@@ -32,7 +44,7 @@ export const getFilterSchema = {
 };
 
 export const getAllIndustriesSchema = {
-  description: 'Admin-only endpoint allowing access to the global list of industries',
+  description: 'Endpoint returning the global list of industries',
   security: [],
   response: {
     200: {
@@ -50,3 +62,34 @@ export const getAllIndustriesSchema = {
     }
   }
 };
+
+export const addIndustriesSchema = {
+  description: 'Adds one or more industries to the global list of industries that can be filtered on',
+  body: industryListSchema,
+  response: {
+    201: {
+      description: 'Successful response',
+      type: 'object',
+      properties: {
+        status: {type: 'string'},
+        id: {type: 'string'}
+      }
+    }
+  }
+};
+
+export const deleteIndustriesSchema = {
+  description: 'Deletes one or more industries from the global list of industries',
+  body: industryListSchema,
+  response: {
+    200: {
+      description: 'Successful response',
+      type: 'object',
+      properties: {
+        status: {type: 'string'},
+        id: {type: 'string'}
+      }
+    }
+  }
+};
+

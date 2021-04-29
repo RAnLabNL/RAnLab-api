@@ -1,11 +1,23 @@
 import type {FastifyInstance, RequestGenericInterface} from 'fastify';
 import {DataLayer, Filters} from "../database/productionDataLayer";
-import {getAllIndustriesSchema, getFilterSchema} from "./docs/filterSchemas";
+import {
+  addIndustriesSchema,
+  deleteIndustriesSchema,
+  getAllIndustriesSchema,
+  getFilterSchema
+} from "./docs/filterSchemas";
 import {Auth0JwtVerifier} from "../auth0";
+import {AuthenticatedRequest} from "./endpointUtils";
 
 interface GetFiltersRequest extends RequestGenericInterface {
   Params: {
     regionId: string
+  }
+}
+
+interface IndustriesRequest extends AuthenticatedRequest {
+  Body: {
+    industries: string[]
   }
 }
 
@@ -30,9 +42,9 @@ export function createFiltersEndpoint(app: FastifyInstance, dataLayer: DataLayer
 
   app.get("/filters/industries", {schema: getAllIndustriesSchema},
     async (request, reply) =>{
-      let {admin} = await verifyJwt(request);
-      if(!admin) {
-        reply.unauthorized("Only admins have access to this data");
+      let {userAppId} = await verifyJwt(request);
+      if(!userAppId) {
+        reply.unauthorized("Must be logged in to access this data");
         return;
       } else {
         let response = {
@@ -41,22 +53,59 @@ export function createFiltersEndpoint(app: FastifyInstance, dataLayer: DataLayer
           industries: <string[]> []
         };
         let regions = await dataLayer.getAllRegions();
+        let industries: string[] = [];
         regions.forEach((r) => {
           if (!!r.filters && !!r.filters.industries) {
-            r.filters.industries.forEach((f_i) => {
-              if(!!f_i.industry) {
-                if (!response.industries.find((r_i) => r_i === f_i.industry)) {
-                  response.industries.push(f_i.industry);
-                }
-              }
-            })
+            industries.push(...r.filters.industries.map(i => i.industry));
           }
         });
+        let globalIndustries = (await dataLayer.getFilters()).industries ?? [];
+        industries.push(...globalIndustries);
+        // Get just unique values
+        response.industries = Array.from(new Set(industries));
 
         return JSON.stringify(response);
       }
     }
   )
 
-  return app;
+  app.post<IndustriesRequest>(
+    "/filters/industries",
+    {schema: addIndustriesSchema},
+    async (request, reply) => {
+      let {userAppId} = await verifyJwt(request);
+      if (!userAppId) {
+        reply.unauthorized("Must be logged in to access this data");
+        return;
+      } else {
+        let response = {
+          status: "ok",
+          date: Date.now()
+        };
+
+        await dataLayer.addIndustries(request.body.industries);
+        return JSON.stringify(response);
+      }
+    });
+
+  app.delete<IndustriesRequest>(
+    "/filters/industries",
+    {schema: deleteIndustriesSchema},
+    async (request, reply) => {
+      let {userAppId} = await verifyJwt(request);
+      if (!userAppId) {
+        reply.unauthorized("Must be logged in to perform this operation");
+        return;
+      } else {
+        let response = {
+          status: "ok",
+          date: Date.now()
+        };
+
+        await dataLayer.deleteIndustries(request.body.industries);
+        return JSON.stringify(response);
+      }
+    });
+
+    return app;
 }
