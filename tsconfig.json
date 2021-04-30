@@ -3,8 +3,9 @@
     /* Basic Options */
     "incremental": true,
     "target": "ES2017",
-    "module": "CommonJS",
+    "module": "commonjs",
     "declaration": true,
+    "outDir": "build",
 
     /* Strict Type-Checking Options */
     "strict": true,
