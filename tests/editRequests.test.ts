@@ -167,14 +167,17 @@ describe("Edit Request unit tests", () => {
 
     const firstPageResponse = await getAllEditRequests(dummyAdminToken);
     expect(firstPageResponse.statusCode).toBe(200);
-    let firstResponseEdits = JSON.parse(firstPageResponse.payload).editRequests;
-    expect(firstResponseEdits).toStrictEqual(arrayContaining(firstPageObjects));
+    let firstResponsePayload = JSON.parse(firstPageResponse.payload);
+    expect(firstResponsePayload.totalCount).toBe(DEFAULT_PAGE_SIZE + 1);
+    expect(firstResponsePayload.editRequests).toStrictEqual(arrayContaining(firstPageObjects));
 
-    let afterId = firstResponseEdits[firstResponseEdits.length-1].id;
+    let afterId = firstResponsePayload.editRequests[firstResponsePayload.editRequests.length-1].id;
     afterId = !!afterId? afterId : "";
     const secondPageResponse = await getAllEditRequests(dummyAdminToken, {afterId});
     expect(secondPageResponse.statusCode).toBe(200);
-    expect(JSON.parse(secondPageResponse.payload).editRequests).toStrictEqual([secondPageRequest]);
+    let secondPagePayload = JSON.parse(secondPageResponse.payload);
+    expect(secondPagePayload.totalCount).toBe(DEFAULT_PAGE_SIZE + 1);
+    expect(secondPagePayload.editRequests).toStrictEqual([secondPageRequest]);
 
     await testApp.close();
     done();

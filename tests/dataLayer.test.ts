@@ -253,6 +253,7 @@ describe("Production Data Layer Integration Tests", () => {
       testRequest.id = id;
       firstPageEdits.push({...testRequest, dateSubmitted: any(Date), dateUpdated: any(Date)});
     }
+
     let expectedFirstPageEdits = firstPageEdits.reverse();
 
     let firstPageRecords = await productionDataLayer.getAllEditRequests(DEFAULT_PAGE_SIZE);

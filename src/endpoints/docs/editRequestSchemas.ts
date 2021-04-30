@@ -28,6 +28,18 @@ import { businessSchema} from './businessesSchemas';
   }
 }
 
+const paginatedEditRequestsResponseSchema = {
+  description: 'Successful response',
+  type: 'object',
+  properties: {
+    status: {type: 'string'},
+    editRequests: {
+      type: 'array',
+      items: editRequestSchema
+    }
+  }
+};
+
 export const getEditRequestByIdSchema = {
   params: byIdSchema,
   response: {
@@ -51,17 +63,7 @@ export const getEditRequestsByRegionSchema = {
     }
   },
   response: {
-    200: {
-      description: 'Successful response',
-      type: 'object',
-      properties: {
-        status: {type: 'string'},
-        editRequests: {
-          type: 'array',
-          items: editRequestSchema
-        }
-      }
-    }
+    200: paginatedEditRequestsResponseSchema
   }
 };
 
@@ -75,17 +77,7 @@ export const getAllEditRequestsByStatusSchema = {
     }
   },
   response: {
-    200: {
-      description: 'Successful response',
-      type: 'object',
-      properties: {
-        status: {type: 'string'},
-        editRequests: {
-          type: 'array',
-          items: editRequestSchema
-        }
-      }
-    }
+    200: paginatedEditRequestsResponseSchema
   }
 };
 

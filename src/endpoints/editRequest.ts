@@ -56,6 +56,7 @@ interface GetPaginatedEditsByRegionId extends AuthenticatedRequestByRegionId {
 
 
 export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
+  const MAX_COUNT = 1000000000;
 
   app.get<GetPaginatedEditsRequest>(
     `/edits`,
@@ -69,7 +70,8 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
         let pageSize = !!request.query.pageSize && request.query.pageSize > 0 ? request.query.pageSize : DEFAULT_PAGE_SIZE;
         let response = {
           status: "ok",
-          editRequests: await dataLayer.getEditRequestsByUser(userAppId, pageSize, request.query.afterId)
+          editRequests: await dataLayer.getEditRequestsByUser(userAppId, pageSize, request.query.afterId),
+          totalCount: (await dataLayer.getEditRequestsByUser(userAppId, MAX_COUNT)).length
         }
         return JSON.stringify(response);
       }
@@ -86,15 +88,19 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
         return;
       } else {
         let editRequests : EditRequest[];
+        let totalCount: number;
         let pageSize = !!request.query.pageSize && request.query.pageSize > 0 ? request.query.pageSize : DEFAULT_PAGE_SIZE;
         if(!request.query.status) {
           editRequests = await dataLayer.getAllEditRequests(pageSize, request.query.afterId);
+          totalCount = (await dataLayer.getAllEditRequests(MAX_COUNT)).length;
         } else {
           editRequests = await dataLayer.getEditRequestsByStatus(request.query.status, pageSize, request.query.afterId)
+          totalCount = (await dataLayer.getEditRequestsByStatus(request.query.status, MAX_COUNT)).length;
         }
         let response = {
           status: "ok",
-          editRequests: editRequests
+          editRequests,
+          totalCount
         }
         return JSON.stringify(response);
       }
@@ -113,9 +119,11 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
         let pageSize = !!request.query.pageSize && request.query.pageSize > 0 ? request.query.pageSize : DEFAULT_PAGE_SIZE;
         let response = {
           status: "ok",
-          editRequests: <EditRequest[]>[]
+          editRequests: <EditRequest[]>[],
+          totalCount: 0
         }
         response.editRequests = await dataLayer.getEditRequestsForRegion(request.params.regionId, pageSize, request.query.afterId)
+        response.totalCount = (await dataLayer.getEditRequestsForRegion(request.params.regionId, MAX_COUNT)).length
         return JSON.stringify(response);
       }
     }

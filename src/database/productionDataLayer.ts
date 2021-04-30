@@ -239,7 +239,6 @@ export class ProductionDataLayer implements DataLayer {
     return Promise.all(promises);
   }
 
-
   private async getPaginatedEditRequests(query: Query, pageSize: number, afterId: string | undefined) {
     let requests: EditRequest[] = [];
     query = query.orderBy("dateSubmitted", 'desc').limit(pageSize);
