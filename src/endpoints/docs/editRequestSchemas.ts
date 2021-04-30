@@ -36,7 +36,8 @@ const paginatedEditRequestsResponseSchema = {
     editRequests: {
       type: 'array',
       items: editRequestSchema
-    }
+    },
+    totalCount: { type: 'number' }
   }
 };
 

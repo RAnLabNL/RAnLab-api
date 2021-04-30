@@ -33,6 +33,13 @@ interface UpdateEditRequest extends AuthenticatedRequestById {
   Body: EditRequest
 }
 
+interface GetPaginatedEditsByRegionId extends AuthenticatedRequestByRegionId {
+  Querystring: {
+    afterId: string,
+    pageSize: number
+  }
+}
+
 interface GetPaginatedEditsByStatusRequest extends AuthenticatedRequest {
   Querystring: {
     status: string,
@@ -41,42 +48,8 @@ interface GetPaginatedEditsByStatusRequest extends AuthenticatedRequest {
   }
 }
 
-interface PaginatedQueryString {
-  afterId: string,
-  pageSize: number
-}
-
-interface GetPaginatedEditsRequest extends AuthenticatedRequest {
-  Querystring: PaginatedQueryString
-}
-
-interface GetPaginatedEditsByRegionId extends AuthenticatedRequestByRegionId {
-  Querystring: PaginatedQueryString
-}
-
-
 export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
   const MAX_COUNT = 1000000000;
-
-  app.get<GetPaginatedEditsRequest>(
-    `/edits`,
-    {schema: getEditRequestByIdSchema},
-    async (request, reply) => {
-      let {userAppId} = await verifyJwt(request);
-      if(!userAppId) {
-        reply.unauthorized("Must be logged in!");
-        return;
-      } else {
-        let pageSize = !!request.query.pageSize && request.query.pageSize > 0 ? request.query.pageSize : DEFAULT_PAGE_SIZE;
-        let response = {
-          status: "ok",
-          editRequests: await dataLayer.getEditRequestsByUser(userAppId, pageSize, request.query.afterId),
-          totalCount: (await dataLayer.getEditRequestsByUser(userAppId, MAX_COUNT)).length
-        }
-        return JSON.stringify(response);
-      }
-    }
-  );
 
   app.get<GetPaginatedEditsByStatusRequest>(
     "/edits/all",
