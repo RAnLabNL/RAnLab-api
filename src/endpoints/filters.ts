@@ -47,24 +47,30 @@ export function createFiltersEndpoint(app: FastifyInstance, dataLayer: DataLayer
         reply.unauthorized("Must be logged in to access this data");
         return;
       } else {
-        let response = {
-          status: "ok",
-          date: Date.now(),
-          industries: <string[]> []
-        };
-        let regions = await dataLayer.getAllRegions();
-        let industries: string[] = [];
-        regions.forEach((r) => {
-          if (!!r.filters && !!r.filters.industries) {
-            industries.push(...r.filters.industries.map(i => i.industry));
+        try {
+          let response = {
+            status: "ok",
+            date: Date.now(),
+            industries: <string[]>[]
+          };
+          let regions = await dataLayer.getAllRegions();
+          let industries: string[] = [];
+          for (let i = 0; i < regions.length; i++) {
+            let filters = await dataLayer.getFilters(regions[i].id);
+            if (!!filters && !!filters.industries) {
+              industries.push(...filters.industries);
+            }
           }
-        });
-        let globalIndustries = (await dataLayer.getFilters()).industries ?? [];
-        industries.push(...globalIndustries);
-        // Get just unique values
-        response.industries = Array.from(new Set(industries));
+          let globalIndustries = (await dataLayer.getFilters()).industries ?? [];
+          industries.push(...globalIndustries);
+          // Get just unique values
+          response.industries = Array.from(new Set(industries));
 
-        return JSON.stringify(response);
+          return JSON.stringify(response);
+        } catch (e) {
+          console.log(e);
+          throw e;
+        }
       }
     }
   )

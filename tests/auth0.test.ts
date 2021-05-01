@@ -103,6 +103,7 @@ describe("Auth0 integration tests", () => {
         headers:{authorization: `Bearer ${adminAccessToken}`}
       });
       expect(regionsResponse.statusCode).toBe(201);
+      DummyRegion.id = JSON.parse(regionsResponse.payload).id;
 
       let response = await sut.inject({
         method: "GET",

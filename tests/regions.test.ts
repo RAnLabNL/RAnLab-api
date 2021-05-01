@@ -40,7 +40,9 @@ describe("Region Endpoint Tests", () => {
         url: `/regions/manager/${region.manager}`
       });
       expect(response.statusCode).toBe(200);
-      expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([...testRegions.filter(r => r.manager == region.manager)]));
+      expect(JSON.parse(response.payload).regions).toStrictEqual(
+        expect.arrayContaining([expect.objectContaining({...region})])
+      );
     }
     const response = await app.inject({
       method: 'GET',
@@ -48,7 +50,12 @@ describe("Region Endpoint Tests", () => {
       url: `/regions/manager/${dummyAdminId}`
     });
     expect(response.statusCode).toBe(200);
-    expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([...testRegions]));
+    expect(JSON.parse(response.payload).regions).toStrictEqual(
+      expect.arrayContaining([
+          ...testRegions.map(r => expect.objectContaining(r)),
+        expect.objectContaining(DummyRegion)
+      ])
+    );
     await app.close();
     done();
   });
@@ -58,7 +65,7 @@ describe("Region Endpoint Tests", () => {
     const response = await getRegionsByDummyManager(app);
 
     expect(response.statusCode).toBe(200);
-    expect(JSON.parse(response.payload).regions).toEqual(expect.arrayContaining([DummyRegion]));
+    expect(JSON.parse(response.payload).regions).toStrictEqual(expect.arrayContaining([expect.objectContaining(DummyRegion)]));
     await app.close();
     done();
   });
@@ -119,7 +126,6 @@ describe("Region Endpoint Tests", () => {
     });
 
     expect(deleteResponse.statusCode).toBe(204);
-
     const getResponse = await getRegionsByDummyManager(app);
     expect(JSON.parse(getResponse.payload).regions).toEqual([]);
 
@@ -136,7 +142,7 @@ describe("Region Endpoint Tests", () => {
     });
 
     expect(getRegionAdminResponse.statusCode).toBe(200);
-    expect(JSON.parse(getRegionAdminResponse.payload).region).toStrictEqual(DummyRegion);
+    expect(JSON.parse(getRegionAdminResponse.payload).region).toStrictEqual(expect.objectContaining(DummyRegion));
 
     const getSysAdminResponse = await app.inject({
       method: 'GET',
@@ -145,7 +151,7 @@ describe("Region Endpoint Tests", () => {
     });
 
     expect(getSysAdminResponse.statusCode).toBe(200);
-    expect(JSON.parse(getSysAdminResponse.payload).region).toStrictEqual(DummyRegion);
+    expect(JSON.parse(getSysAdminResponse.payload).region).toStrictEqual(expect.objectContaining(DummyRegion));
 
     await app.close();
     done();

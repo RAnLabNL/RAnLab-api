@@ -49,7 +49,7 @@ export interface DataLayer {
   getEditRequestsByUser(userAppId: string, pageSize: number, afterId?: string): Promise<EditRequest[]>;
   createEditRequest(add: EditRequest): Promise<IdObject>;
   updateEditRequest(body: EditRequest): Promise<EditRequest>;
-  addIndustries(industries: string[]): Promise<void>;
+  addIndustries(industries: string[]): Promise<void[]>;
   deleteIndustries(industries: string[]) : Promise<any[]>;
 }
 
@@ -141,8 +141,14 @@ export class ProductionDataLayer implements DataLayer {
   async getFilters(region?: string) : Promise<Filters>{
     if(!!region) {
       let regionData = (await this.firestore.collection("regions").doc(region).get()).data();
-      regionData = !!regionData ? regionData : {};
-      return regionData.filters;
+      let industries: string[] = [];
+      let years: number[] = [];
+
+      if(!!regionData && !!regionData.filters) {
+        industries =  regionData.filters.industries?.map((i: { industry: any; }) => i.industry);
+        years = regionData.filters.years?.map((y: { year: any; }) => Number.parseInt(y.year))
+      }
+      return {industries, years};
     } else {
       let industries: string[] = [];
       let industryData = (await this.firestore.collection("industries").get()).docs;
@@ -225,9 +231,14 @@ export class ProductionDataLayer implements DataLayer {
     return this.getPaginatedEditRequests(query, pageSize, afterId);
   }
 
-  async addIndustries(industries: string[]): Promise<void> {
-    industries.forEach(
-      i => this.firestore.collection("industries").doc(i).set({active: true})
+  async addIndustries(industries: string[]): Promise<void[]> {
+    return Promise.all(
+      industries.map(
+        async i => {
+          await this.firestore.collection("industries").doc(i).set({active: true});
+          return;
+        }
+      )
     );
   }
 

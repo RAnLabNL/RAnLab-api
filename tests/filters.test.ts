@@ -17,7 +17,7 @@ describe("Filter Endpoint Tests", () => {
   let testDataLayer: DummyDatalayer;
   const CREATED_INDUSTRY = 'Created Industry';
   let DEFAULT_INDUSTRIES = [DummyBiz.industry, `Not ${DummyBiz.industry}`, CREATED_INDUSTRY];
-
+  let dummyRegionId: string;
   beforeAll(async (done) => {
     setupAuth0TestEnv();
     testDataLayer = new DummyDatalayer();
@@ -26,7 +26,8 @@ describe("Filter Endpoint Tests", () => {
     const bizApp = createBusinessesEndpoint(server, testDataLayer, dummyTokenVerifier);
     const filterApp = createFiltersEndpoint(server, testDataLayer,  dummyTokenVerifier);
 
-    await createDummyRegion(regionsApp);
+    let dummyRegionResponse = await createDummyRegion(regionsApp) ?? {payload: "{}"};
+    dummyRegionId = JSON.parse(dummyRegionResponse.payload).regionId;
     let notDummyRegion = {...DummyRegion};
     notDummyRegion.name = `Not ${DummyRegion.name}`;
     await regionsApp.inject({
@@ -50,10 +51,10 @@ describe("Filter Endpoint Tests", () => {
 
   it('Region-specific filter data is correct', async (done) => {
     const server = testify();
-    const filterApp = createFiltersEndpoint(server, testDataLayer,  dummyTokenVerifier);
+    const filterApp = createFiltersEndpoint(server, testDataLayer, dummyTokenVerifier);
     const filterResponse  = await filterApp.inject({
       method: 'GET',
-      url: `/regions/${DummyRegion.name}/filters`,
+      url: `/regions/${dummyRegionId}/filters`,
       headers: { authorization: `Bearer ${dummyRegionManagerToken}`}
     });
 

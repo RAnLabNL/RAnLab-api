@@ -64,7 +64,7 @@ export class DummyDatalayer implements DataLayer {
   }
 
   async setRegion(region: Region): Promise<IdObject> {
-    this.regions.push(region);
+    this.regions.push({...region, id: region.name});
     return {id: region.name};
   }
 
@@ -112,8 +112,9 @@ export class DummyDatalayer implements DataLayer {
     return this.editRequests[index];
   }
 
-  async addIndustries(industries: string[]): Promise<void> {
+  async addIndustries(industries: string[]): Promise<void[]> {
     this.industries.push(...industries);
+    return [];
   }
 
   async deleteIndustries(industries: string[]): Promise<any[]> {

@@ -141,8 +141,8 @@ export default function createRegionsEndpoint(app: FastifyInstance, dataLayer : 
     '/regions/:regionId',
     {schema: deleteRegionReqSchema},
     async (request, reply) => {
-      let {userId, admin} = <{userId:string, admin: boolean}>await request.jwtVerify();
-      if(admin || isRegionManager(userId, request.params.regionId, dataLayer)) {
+      let {userAppId, admin} = await verifyJwt(request);
+      if(admin || await isRegionManager(userAppId, request.params.regionId, dataLayer)) {
         await dataLayer.deleteRegion(request.params.regionId);
         reply.code(204);
       } else {

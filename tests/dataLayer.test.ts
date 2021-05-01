@@ -63,7 +63,7 @@ describe("Production Data Layer Integration Tests", () => {
     expect(byRegionData).toEqual(expect.arrayContaining([expect.objectContaining(biz)]));
 
     let filters = await productionDataLayer.getFilters(biz.regionId);
-    expect(filters).toEqual(expect.objectContaining({years: [{year: biz.year_added, count: 1}], industries: [{industry: biz.industry, count: 1}]}))
+    expect(filters).toEqual(expect.objectContaining({years: [biz.year_added], industries: [biz.industry]}))
 
     biz.id = id;
     biz.employees = 2;
@@ -75,7 +75,7 @@ describe("Production Data Layer Integration Tests", () => {
     expect(updatedBizData).toEqual(expect.arrayContaining([expect.objectContaining(biz)]));
 
     let updatedFilters = await productionDataLayer.getFilters(biz.regionId);
-    expect(updatedFilters).toEqual(expect.objectContaining({years: [{year: biz.year_added, count: 1}], industries: [{industry: biz.industry, count: 1}]}));
+    expect(updatedFilters).toEqual(expect.objectContaining({years: [biz.year_added], industries: [biz.industry]}));
 
     await productionDataLayer.deleteBusiness(biz.id);
     let emptyBizData = await productionDataLayer.getBusinessesByRegion(biz.regionId);

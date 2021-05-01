@@ -16,6 +16,6 @@ export function addRoutes(server: FastifyInstance, ...endpoints: EndpointFunctio
 
 export async function isRegionManager(userId: string, regionId: string, dataLayer: DataLayer) {
   const regions = (await dataLayer.getRegionsManagedBy(userId));
-  return  regions.find((r) => r.name === regionId);
+  return  !!regions.find((r) => r.id === regionId);
 }
 
