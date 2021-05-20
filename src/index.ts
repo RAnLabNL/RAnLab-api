@@ -19,6 +19,7 @@ const server = fastify({logger: true});
 server.register(fastifySensible);
 registerSwagger(server);
 registerCorsHandler(server);
+
 addRoutes(
   server,
   createPingEndpoint,

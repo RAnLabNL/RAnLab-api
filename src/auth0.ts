@@ -78,7 +78,8 @@ export interface UserInfoPatch {
   username?: string
 }
 
-async function getUserRole(userId: string) : Promise<{role:string}> {
+type UserRole = {role: string};
+async function getUserRole(userId: string) : Promise<UserRole> {
   let app_metadata = (await getUserById(userId)).app_metadata;
   return {role: app_metadata.role};
 }
@@ -107,6 +108,7 @@ export async function getAllUsers(per_page? : number, page?: number) {
 
 export async function updateUser(userId: string, userInfoPatch: UserInfoPatch) {
   userId = userId.startsWith("auth0|") ? userId : `auth0|${userId}`;
+  console.log("Patching from API");
   return callManagementApi<Auth0UserInfo>(`/users/${userId}`, "PATCH", JSON.stringify(userInfoPatch));
 }
 
@@ -126,8 +128,7 @@ async function callManagementApi<T>(path: string, method = "GET", body = "", ref
   }
   let metaResponse = await fetch(url, options);
   if(metaResponse.status === 200) {
-    let json = await metaResponse.json()
-    return json;
+    return await metaResponse.json();
   } else if (!refresh && metaResponse.status === 401) {
     return await callManagementApi<T>(path, method, body,true);
   } else {
@@ -135,8 +136,8 @@ async function callManagementApi<T>(path: string, method = "GET", body = "", ref
   }
 }
 
-
-export async function getUserInfo(authHeader: string) {
+export type UserID = {userId: string};
+export async function getUserInfo(authHeader: string) : Promise<UserID> {
   try {
     let userResponse = await fetch(`https://${process.env.AUTH0_DOMAIN}/userinfo`, {
       "method": "GET",
@@ -149,17 +150,41 @@ export async function getUserInfo(authHeader: string) {
     throw e;
   }
 }
+export type UserAuthEntry = {userAppId: string, admin: boolean, role: string};
+export type Auth0JwtVerifier = (request: FastifyRequest) => Promise<UserAuthEntry>;
+export type ICacheEntry = {
+  timestamp: number,
+  data: UserAuthEntry
+};
 
-export type Auth0JwtVerifier = (request: FastifyRequest) => Promise<{userAppId: string, admin: boolean, role: string}>;
-export async function verifyJwt(request: FastifyRequest) {
-  let authHeader = !request.headers.authorization ? "" : request.headers.authorization
+let cache = new Map<string, ICacheEntry>();
+const LIFETIME_MILLISECONDS = 1000 * 60 * 30; // half an hour
+export async function verifyJwtCached(authHeader: string, cache: Map<string, ICacheEntry>, getUserInfo: (token: string) => Promise<UserID>, getUserRole: (id: string) => Promise<UserRole>) {
   if(!authHeader) {
     return {userAppId: "", admin: false, role: ""};
   } else {
-    let {userId} = await getUserInfo(authHeader);
-    let {role} = await getUserRole(userId);
-    let admin: boolean = role === "admin"
-    let userAppId = userId.indexOf("|") > 0 ? userId.split("|")[1] : userId;
-    return {userAppId, admin, role};
+    let cachedAuth = cache.get(authHeader);
+    if(!cachedAuth || Date.now() > cachedAuth.timestamp + LIFETIME_MILLISECONDS) {
+      let {userId} = await getUserInfo(authHeader);
+      let {role} = await getUserRole(userId);
+      let admin: boolean = role === "admin"
+      let userAppId = userId.indexOf("|") > 0 ? userId.split("|")[1] : userId;
+      cachedAuth = {timestamp: Date.now(), data: {userAppId, admin, role}};
+      cache.set(authHeader,  cachedAuth);
+    }
+    return cachedAuth.data;
   }
+}
+
+export async function verifyJwt(request: FastifyRequest) {
+  let authHeader = !request.headers.authorization ? "" : request.headers.authorization;
+  return await verifyJwtCached(authHeader, cache, getUserInfo, getUserRole);
+}
+
+export function removeUserFromCache(request: FastifyRequest) {
+  let authHeader = !request.headers.authorization ? "" : request.headers.authorization;
+  deleteCachedUser(authHeader);
+}
+export function deleteCachedUser(authHeader: string) {
+  cache.delete(authHeader);
 }

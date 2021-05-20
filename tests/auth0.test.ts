@@ -7,7 +7,50 @@ import fastifySensible from "fastify-sensible";
 import {authenticateToTestDomain, setupAuth0TestEnv} from "./testUtils/testify";
 import {DummyRegion} from "./testUtils/dummyData";
 import {DataLayer} from "../src/database/productionDataLayer";
-import {getUserInfo, verifyJwt} from "../src/auth0";
+import {
+  deleteCachedUser,
+  getUserInfo,
+  ICacheEntry,
+  verifyJwt,
+  verifyJwtCached
+} from "../src/auth0";
+
+describe("Auth0 unit tests", () => {
+  it("Pulls cached credentials when possible", async () => {
+    const TEST_AUTH_HEADER = "Test";
+    let userCalls = 0;
+    let roleCalls = 0;
+    let testData = {
+      userAppId: "testUser",
+      role: "testRole",
+      admin: false
+    };
+
+    async function testCachedVerify(cache: Map<string,ICacheEntry>) {
+        let v = await verifyJwtCached(
+          TEST_AUTH_HEADER,
+          cache,
+          () => {
+            userCalls++;
+            return Promise.resolve({userId: testData.userAppId})
+          },
+          () => {
+            roleCalls++;
+            return Promise.resolve({role: testData.role})
+          }
+        );
+
+        expect(userCalls).toBe(1);
+        expect(roleCalls).toBe(1);
+        expect(v).toStrictEqual(testData);
+    }
+    let cache = new Map<string, ICacheEntry>();
+    await testCachedVerify(cache);
+    await testCachedVerify(cache);
+    deleteCachedUser(TEST_AUTH_HEADER);
+    await testCachedVerify(cache);
+  });
+});
 
 describe("Auth0 integration tests", () => {
   let sut : FastifyInstance;
