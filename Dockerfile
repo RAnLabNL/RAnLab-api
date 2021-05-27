@@ -1,5 +1,8 @@
 FROM node:15
 
+RUN apt-get update
+RUN apt-get install -y memcached
+
 # Create and change to the app directory.
 WORKDIR /usr/src/app
 
@@ -13,8 +16,9 @@ RUN yarn install --only=production
 
 # Copy local code to the container image.
 COPY . .
+RUN chmod +x ./conf/startup.sh
 
 RUN yarn build
 
 # Run the web service on container startup.
-CMD [ "yarn", "start" ]
+CMD [ "./conf/startup.sh" ]
