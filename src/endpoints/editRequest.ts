@@ -269,7 +269,5 @@ export function createEditEndpoint(app: FastifyInstance, dataLayer: DataLayer, v
     }
   }
 
-
   return app;
-
 }

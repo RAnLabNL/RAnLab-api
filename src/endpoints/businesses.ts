@@ -51,7 +51,6 @@ export interface BusinessUpdate {
 }
 
 export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLayer, verifyJwt: Auth0JwtVerifier) {
-
   app.get<AuthenticatedRequestByRegionId>(
     '/regions/:regionId/businesses',
     {schema: getBizSchema},

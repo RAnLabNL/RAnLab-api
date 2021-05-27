@@ -1,5 +1,6 @@
 import {FastifyInstance} from "fastify";
-import {Auth0JwtVerifier, Auth0UserInfo, getAllUsers, getUserById, updateUser, UserInfoPatch} from "../auth0";
+import {Auth0JwtVerifier, Auth0UserInfo, UserInfoPatch} from "../auth0";
+import {getAllUsers, getUserById, updateUser} from "../dependencies/auth0Api"
 import {AuthenticatedRequest, AuthenticatedRequestById} from "./endpointUtils";
 import {getAllUsersRequestSchema, getUserInfoRequestSchema, updateUserRequestSchema} from "./docs/userSchema";
 

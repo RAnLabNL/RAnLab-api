@@ -15,7 +15,7 @@ describe("Auth0 user endpoint tests", () => {
       });
     }
     let server = testify();
-    let userApp = createUsersEndpoint(server, verifyJwt);
+    let userApp = createUsersEndpoint(server, verifyJwt, cache);
     setupAuth0TestEnv();
     let authTokens = await authenticateToTestDomain();
     userAccessToken = authTokens.userAccessToken;
