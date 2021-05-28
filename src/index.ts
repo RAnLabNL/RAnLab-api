@@ -16,6 +16,9 @@ import createUsersEndpoint from "./endpoints/users";
 import {createCacheEndpoint} from "./endpoints/cache";
 import {Memcached} from "memcached-node";
 
+let productionCache = new Memcached("127.0.0.1:11211");
+productionCache.createPool();
+
 let productionDataLayer = new ProductionDataLayer(productionFirestore)
 const port = Number(process.env.PORT || 8080);
 const server = fastify({logger: true});
@@ -23,7 +26,6 @@ server.register(fastifySensible);
 registerSwagger(server);
 registerCorsHandler(server);
 
-let productionCache = new Memcached("127.0.0.1:11211");
 let prodJwtVerifier = getJwtVerifier(productionCache);
 addRoutes(
   server,
