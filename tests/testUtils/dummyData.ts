@@ -1,7 +1,8 @@
-import {FastifyInstance, FastifyRequest} from "fastify";
+import {FastifyInstance} from "fastify";
 import {Business, BusinessUpdate} from "../../src/endpoints/businesses";
 import {Region} from "../../src/database/productionDataLayer";
 import {getMockToken} from "./testify";
+import {MinimalRequest} from "../../src/auth0";
 
 const dummyManager = "DummyManagerId";
 export const dummyAdminId = "admin";
@@ -30,8 +31,8 @@ export const DummyBizUpdate: BusinessUpdate = {
 };
 
 
-export async function dummyTokenVerifier (req: FastifyRequest) {
-  if(!req.headers.authorization || !req.headers.authorization.split("Bearer")[1].trim()) {
+export async function dummyTokenVerifier (req: MinimalRequest) {
+  if(!req.headers || !req.headers.authorization || !req.headers.authorization.split("Bearer")[1].trim()) {
     return {userAppId: "", admin: false, role: ""};
   }
   if(req.headers.authorization.indexOf(dummyAdminToken) > 0) {

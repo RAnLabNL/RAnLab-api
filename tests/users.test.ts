@@ -1,6 +1,5 @@
-import {authenticateToTestDomain, setupAuth0TestEnv, testify} from "./testUtils/testify";
+import {authenticateToTestDomain, getEmptyCacheJwtVerifier, setupAuth0TestEnv, testify} from "./testUtils/testify";
 import createUsersEndpoint from "../src/endpoints/users";
-import { verifyJwt } from "../src/auth0";
 
 describe("Auth0 user endpoint tests", () => {
   let userAccessToken: string;
@@ -15,7 +14,7 @@ describe("Auth0 user endpoint tests", () => {
       });
     }
     let server = testify();
-    let userApp = createUsersEndpoint(server, verifyJwt, cache);
+    let userApp = createUsersEndpoint(server, getEmptyCacheJwtVerifier());
     setupAuth0TestEnv();
     let authTokens = await authenticateToTestDomain();
     userAccessToken = authTokens.userAccessToken;
@@ -46,7 +45,7 @@ describe("Auth0 user endpoint tests", () => {
       });
     }
     let server = testify();
-    let userApp = createUsersEndpoint(server, verifyJwt);
+    let userApp = createUsersEndpoint(server, getEmptyCacheJwtVerifier());
     setupAuth0TestEnv();
     let authTokens = await authenticateToTestDomain();
     userAccessToken = authTokens.userAccessToken;
@@ -76,7 +75,7 @@ describe("Auth0 user endpoint tests", () => {
       });
     }
     let server = testify();
-    let userApp = createUsersEndpoint(server, verifyJwt);
+    let userApp = createUsersEndpoint(server, getEmptyCacheJwtVerifier());
     setupAuth0TestEnv();
     let authTokens = await authenticateToTestDomain();
     userAccessToken = authTokens.userAccessToken;

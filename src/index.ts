@@ -1,6 +1,5 @@
 import fastify, {FastifyInstance} from 'fastify';
 import fastifySensible from "fastify-sensible";
-import MemcachePlus from "memcache-plus";
 
 import createPingEndpoint from './endpoints/ping';
 import { addRoutes } from './utils';
@@ -15,6 +14,7 @@ import {createEditEndpoint} from "./endpoints/editRequest";
 import {productionFirestore} from "./database/firestore";
 import createUsersEndpoint from "./endpoints/users";
 import {createCacheEndpoint} from "./endpoints/cache";
+import {Memcached} from "memcached-node";
 
 let productionDataLayer = new ProductionDataLayer(productionFirestore)
 const port = Number(process.env.PORT || 8080);
@@ -23,7 +23,7 @@ server.register(fastifySensible);
 registerSwagger(server);
 registerCorsHandler(server);
 
-let productionCache = new MemcachePlus();
+let productionCache = new Memcached("127.0.0.1:11211");
 let prodJwtVerifier = getJwtVerifier(productionCache);
 addRoutes(
   server,

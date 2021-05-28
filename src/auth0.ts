@@ -43,10 +43,14 @@ async function verifyJwtFromAuth0(authHeader: string, getUserInfo: (token: strin
 
 async function verifyJwt(request: MinimalRequest, userCache: Memcached, getUserInfo: (token: string) => Promise<string>, getUserRole: (userId: string) => Promise<string>) {
   let authHeader = !!request.headers && !!request.headers.authorization ? request.headers.authorization : "";
-  let userData =  await verifyJwtCached(authHeader, userCache);
-  if(!userData) {
-    userData = await verifyJwtFromAuth0(authHeader, getUserInfo, getUserRole)
-    await userCache.add(authHeader, userData, {expires: LIFETIME_SECONDS});
+  if (!authHeader) {
+    return {userAppId: null, role: null, admin: false}
+  } else {
+    let userData =  await verifyJwtCached(authHeader, userCache);
+    if(!userData) {
+      userData = await verifyJwtFromAuth0(authHeader, getUserInfo, getUserRole)
+      await userCache.add(authHeader, userData, {expires: LIFETIME_SECONDS});
+    }
+    return userData;
   }
-  return userData;
 }

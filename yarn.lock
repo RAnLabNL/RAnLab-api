@@ -667,6 +667,13 @@
   dependencies:
     "@types/node" "*"
 
+"@types/hashring@^3.2.1":
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/@types/hashring/-/hashring-3.2.1.tgz#1f5176a1d5729d631bd4d944a0be9480cd6775f4"
+  integrity sha512-69vRQ10rZ0rj+KHMel6vSJpy9p7O5FsiczuS7RrzqaXpL4RYYPaW4MeseOISAJ0KQo+WUknXIYLwmFHhTTJrew==
+  dependencies:
+    "@types/node" "*"
+
 "@types/istanbul-lib-coverage@*", "@types/istanbul-lib-coverage@^2.0.0", "@types/istanbul-lib-coverage@^2.0.1":
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/@types/istanbul-lib-coverage/-/istanbul-lib-coverage-2.0.3.tgz"

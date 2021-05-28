@@ -56,8 +56,8 @@ export function createBusinessesEndpoint(app: FastifyInstance, dataLayer: DataLa
     {schema: getBizSchema},
     async (request  , reply) => {
 
-      let {userAppId, admin} = await verifyJwt(request)
-      if(!(admin || await isRegionManager(userAppId, request.params.regionId, dataLayer))) {
+      let {userAppId, admin} = await verifyJwt(request);
+      if (!(admin || await isRegionManager(userAppId, request.params.regionId, dataLayer))) {
         reply.unauthorized("User does not have access to region");
         return;
       } else {

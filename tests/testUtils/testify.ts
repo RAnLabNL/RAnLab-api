@@ -1,8 +1,12 @@
-import fastify, {FastifyRequest} from "fastify";
+import fastify from "fastify";
 import fastifyJWT, {FastifyJWTOptions} from "fastify-jwt";
 import jwt from "jsonwebtoken";
 import fastifySensible from "fastify-sensible";
 import fetch from "node-fetch";
+import {It, Mock} from "typemoq";
+import {Memcached, ResponseCode} from "memcached-node";
+
+import {getJwtVerifier, MinimalRequest} from "../../src/auth0";
 
 export const AUTH0_CLAIMS_NAMESPACE = "https://mun.ca";
 export const mockSecret = 'dummy';
@@ -61,8 +65,17 @@ export function getMockToken(payload: {userAppId: string, admin: boolean  }) {
 }
 
 export function getTestJwtVerifier(userAppId: string, admin: boolean) {
-  return async(_: FastifyRequest) => ({userAppId, admin, role: admin ? "admin" : "region" });
+  return async(_: MinimalRequest) => ({userAppId, admin, role: admin ? "admin" : "region" });
 }
+
+
+export function getEmptyCacheJwtVerifier() {
+  let cachePrototype = new Memcached("127.0.0.1:11211");
+  let dummyCache = Mock.ofInstance(cachePrototype);
+  dummyCache.setup(c => c.get(It.isAnyString())).returns(_ => Promise.resolve({code: ResponseCode.NOT_FOUND}));
+  return getJwtVerifier(dummyCache.object);
+}
+
 
 export const testify = () => {
   const f = fastify({logger: {level: "debug"}});

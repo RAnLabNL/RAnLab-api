@@ -1,17 +1,18 @@
+import fastify, {FastifyInstance} from "fastify";
+import fastifySensible from "fastify-sensible";
+import {Memcached, ResponseCode} from "memcached-node";
+import {IMock, It, Mock, Times} from "typemoq"
+
 import {addRoutes} from "../src/utils";
 import createRegionsEndpoint from "../src/endpoints/regions";
 import {DummyDatalayer} from "./testUtils/testDataLayer";
 import {createBusinessesEndpoint} from "../src/endpoints/businesses";
-import fastifySensible from "fastify-sensible";
-import {authenticateToTestDomain, setupAuth0TestEnv} from "./testUtils/testify";
+import {authenticateToTestDomain, getEmptyCacheJwtVerifier, setupAuth0TestEnv} from "./testUtils/testify";
 import {DummyRegion} from "./testUtils/dummyData";
 import {DataLayer} from "../src/database/productionDataLayer";
 import {Auth0JwtVerifier, getJwtVerifier, LIFETIME_SECONDS} from "../src/auth0";
-
-import fastify, {FastifyInstance} from "fastify";
-import {IMock, It, Mock, Times} from "typemoq"
-import {Memcached, ResponseCode} from "memcached-node";
 import {getUserIdFromAuth0} from "../src/dependencies/auth0Api";
+
 
 describe("Auth0 unit tests", () => {
   const TEST_AUTH_HEADER = "Test";
@@ -37,8 +38,8 @@ describe("Auth0 unit tests", () => {
 
   it("Pulls cached credentials first", async () => {
     mockCache.setup(c => c.get(It.isAnyString()))
-      .returns((_: string) => Promise.resolve(
-        {
+      .returns((_: string) =>
+        Promise.resolve({
           code: ResponseCode.EXISTS,
           data: {
             [TEST_AUTH_HEADER]: {
@@ -46,8 +47,8 @@ describe("Auth0 unit tests", () => {
               value: JSON.stringify(testData)
             }
           }
-        }
-      ));
+        })
+      );
     mockIdGetter.setup(g => g(It.isAnyString())).returns(_ => Promise.resolve(TEST_AUTH0_ID));
     mockRoleGetter.setup(g => g(It.isAnyString())).returns(_ => Promise.resolve(TEST_ROLE));
 
@@ -101,9 +102,7 @@ describe("Auth0 integration tests", () => {
   describe("Region Tests", () => {
     let verifyJwt: Auth0JwtVerifier;
     beforeEach(() => {
-      let dummyCache = Mock.ofType(Memcached);
-      dummyCache.setup(c => c.get(It.isAnyString())).returns(_ => Promise.resolve({code: ResponseCode.NOT_FOUND}));
-      verifyJwt = getJwtVerifier(dummyCache.object);
+      verifyJwt = getEmptyCacheJwtVerifier();
       addRoutes(
         sut,
         () => createRegionsEndpoint(sut, new DummyDatalayer(), verifyJwt)
@@ -144,9 +143,7 @@ describe("Auth0 integration tests", () => {
     let testDataLayer: DataLayer;
     let verifyJwt: Auth0JwtVerifier;
     beforeEach(() => {
-      let dummyCache = Mock.ofType(Memcached);
-      dummyCache.setup(c => c.get(It.isAnyString())).returns(_ => Promise.resolve({code: ResponseCode.NOT_FOUND}))
-      verifyJwt = getJwtVerifier(dummyCache.object);
+      verifyJwt = getEmptyCacheJwtVerifier();
       testDataLayer = new DummyDatalayer();
       addRoutes(sut,
         () => createBusinessesEndpoint(sut, testDataLayer, verifyJwt),
