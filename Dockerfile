@@ -21,4 +21,4 @@ RUN chmod +x ./conf/startup.sh
 RUN yarn build
 
 # Run the web service on container startup.
-CMD [ "./conf/startup.sh" ]
+CMD [ "conf/startup.sh" ]
