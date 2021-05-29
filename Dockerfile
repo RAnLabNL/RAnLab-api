@@ -12,13 +12,15 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install production dependencies.
-RUN yarn install --only=production
+RUN yarn install --production
 
 # Copy local code to the container image.
-COPY . .
+COPY ./src ./src
+COPY ./conf ./conf
+COPY ./tsconfig.json .
 RUN chmod +x ./conf/startup.sh
 
 RUN yarn build
 
 # Run the web service on container startup.
-CMD [ "conf/startup.sh" ]
+CMD [ "./conf/startup.sh" ]

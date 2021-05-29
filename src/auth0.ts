@@ -54,7 +54,7 @@ async function verifyJwt(request: MinimalRequest, userCache: Memcached, getUserI
     let userData =  await verifyJwtCached(cacheKey, userCache);
     if(!userData) {
       userData = await verifyJwtFromAuth0(authHeader, getUserInfo, getUserRole)
-      await userCache.add(cacheKey, userData, {expires: LIFETIME_SECONDS});
+      await userCache.set(cacheKey, userData, {mode: "json", expires: LIFETIME_SECONDS});
     }
     return userData;
   }

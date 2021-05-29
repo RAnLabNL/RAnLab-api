@@ -16,7 +16,7 @@ import createUsersEndpoint from "./endpoints/users";
 import {createCacheEndpoint} from "./endpoints/cache";
 import {Memcached} from "memcached-node";
 
-let productionCache = new Memcached("127.0.0.1:11211");
+let productionCache = new Memcached("127.0.0.1:11211", {wait:true});
 productionCache.createPool();
 
 let productionDataLayer = new ProductionDataLayer(productionFirestore)
