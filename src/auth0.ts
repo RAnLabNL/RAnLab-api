@@ -15,13 +15,17 @@ async function getUserRoleFromAuth0(userId: string) : Promise<string> {
   return app_metadata.role;
 }
 
-async function verifyJwtCached(authHeader: string, cache: Memcached) {
-  if(!authHeader) {
+function getCacheKey(authHeader: string) {
+  return authHeader.split(" ")[1].substr(0, 100);
+}
+
+async function verifyJwtCached(cacheKey: string, cache: Memcached) {
+  if(!cacheKey) {
     return null;
   } else {
-    let cachedData = await cache.get(authHeader);
+    let cachedData = await cache.get(cacheKey);
     if (cachedData.code === ResponseCode.EXISTS && !!cachedData.data) {
-      let headerMetadata = cachedData.data[authHeader];
+      let headerMetadata = cachedData.data[cacheKey];
       if (!!headerMetadata && !!headerMetadata.value) {
         return JSON.parse(headerMetadata.value.toString());
       } else {
@@ -46,10 +50,11 @@ async function verifyJwt(request: MinimalRequest, userCache: Memcached, getUserI
   if (!authHeader) {
     return {userAppId: null, role: null, admin: false}
   } else {
-    let userData =  await verifyJwtCached(authHeader, userCache);
+    let cacheKey = getCacheKey(authHeader);
+    let userData =  await verifyJwtCached(cacheKey, userCache);
     if(!userData) {
       userData = await verifyJwtFromAuth0(authHeader, getUserInfo, getUserRole)
-      await userCache.add(authHeader, userData, {expires: LIFETIME_SECONDS});
+      await userCache.add(cacheKey, userData, {expires: LIFETIME_SECONDS});
     }
     return userData;
   }
