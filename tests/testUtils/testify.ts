@@ -4,9 +4,9 @@ import jwt from "jsonwebtoken";
 import fastifySensible from "fastify-sensible";
 import fetch from "node-fetch";
 import {It, Mock} from "typemoq";
-import {Memcached, ResponseCode} from "memcached-node";
 
 import {getJwtVerifier, MinimalRequest} from "../../src/auth0";
+import {DataLayer} from "../../src/database/productionDataLayer";
 
 export const AUTH0_CLAIMS_NAMESPACE = "https://mun.ca";
 export const mockSecret = 'dummy';
@@ -70,9 +70,8 @@ export function getTestJwtVerifier(userAppId: string, admin: boolean) {
 
 
 export function getEmptyCacheJwtVerifier() {
-  let cachePrototype = new Memcached("127.0.0.1:11211");
-  let dummyCache = Mock.ofInstance(cachePrototype);
-  dummyCache.setup(c => c.get(It.isAnyString())).returns(_ => Promise.resolve({code: ResponseCode.NOT_FOUND}));
+  let dummyCache = Mock.ofType<DataLayer>();
+  dummyCache.setup(c => c.getUserInfo(It.isAnyString())).returns(_ => Promise.resolve(null));
   return getJwtVerifier(dummyCache.object);
 }
 

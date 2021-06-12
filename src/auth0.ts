@@ -1,12 +1,12 @@
 import {getUserById, getUserIdFromAuth0} from "./dependencies/auth0Api";
-import {Memcached, ResponseCode} from "memcached-node";
+import {DataLayer} from "./database/productionDataLayer";
 
-export const LIFETIME_SECONDS =  60 * 30; // half an hour
+export const LIFETIME_MILLISECONDS =  1000 * 60 * 30; // half an hour
 export type MinimalRequest = { headers?: {authorization?: string }};
 export type Auth0JwtVerifier = (request: MinimalRequest) => Promise<UserAuthEntry>;
 export type UserAuthEntry = {userAppId: string, admin: boolean, role: string};
 
-export function getJwtVerifier(cache: Memcached, getUserInfo = getUserIdFromAuth0, getUserRole = getUserRoleFromAuth0 ) : Auth0JwtVerifier {
+export function getJwtVerifier(cache: DataLayer, getUserInfo = getUserIdFromAuth0, getUserRole = getUserRoleFromAuth0 ) : Auth0JwtVerifier {
   return (request : MinimalRequest) => verifyJwt(request, cache, getUserInfo, getUserRole);
 }
 
@@ -19,18 +19,13 @@ function getCacheKey(authHeader: string) {
   return authHeader.split(" ")[1].substr(0, 100);
 }
 
-async function verifyJwtCached(cacheKey: string, cache: Memcached) {
+async function verifyJwtCached(cacheKey: string, cache: DataLayer) {
   if(!cacheKey) {
     return null;
   } else {
-    let cachedData = await cache.get(cacheKey);
-    if (cachedData.code === ResponseCode.EXISTS && !!cachedData.data) {
-      let headerMetadata = cachedData.data[cacheKey];
-      if (!!headerMetadata && !!headerMetadata.value) {
-        return JSON.parse(headerMetadata.value.toString());
-      } else {
-        return null;
-      }
+    let cachedData = await cache.getUserInfo(cacheKey);
+    if (!!cachedData) {
+      return cachedData;
     } else {
       return null;
     }
@@ -45,7 +40,7 @@ async function verifyJwtFromAuth0(authHeader: string, getUserInfo: (token: strin
   return {userAppId, admin, role};
 }
 
-async function verifyJwt(request: MinimalRequest, userCache: Memcached, getUserInfo: (token: string) => Promise<string>, getUserRole: (userId: string) => Promise<string>) {
+async function verifyJwt(request: MinimalRequest, userCache: DataLayer, getUserInfo: (token: string) => Promise<string>, getUserRole: (userId: string) => Promise<string>) {
   let authHeader = !!request.headers && !!request.headers.authorization ? request.headers.authorization : "";
   if (!authHeader) {
     return {userAppId: null, role: null, admin: false}
@@ -54,7 +49,7 @@ async function verifyJwt(request: MinimalRequest, userCache: Memcached, getUserI
     let userData =  await verifyJwtCached(cacheKey, userCache);
     if(!userData) {
       userData = await verifyJwtFromAuth0(authHeader, getUserInfo, getUserRole)
-      await userCache.set(cacheKey, userData, {mode: "json", expires: LIFETIME_SECONDS});
+      await userCache.setUserInfo(cacheKey, userData);
     }
     return userData;
   }

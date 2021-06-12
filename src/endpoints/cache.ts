@@ -2,9 +2,9 @@ import {FastifyInstance} from "fastify";
 import {Auth0JwtVerifier} from "../auth0";
 import {AuthenticatedRequest} from "./endpointUtils";
 import {emptyCacheSchema} from "./docs/cacheSchemas";
-import {Memcached} from "memcached-node";
+import {DataLayer} from "../database/productionDataLayer";
 
-export function createCacheEndpoint(app: FastifyInstance, verifyJwt: Auth0JwtVerifier, cache: Memcached) {
+export function createCacheEndpoint(app: FastifyInstance, verifyJwt: Auth0JwtVerifier, cache: DataLayer) {
   app.post<AuthenticatedRequest>(
     "/cache/empty",
     {schema: emptyCacheSchema},
@@ -14,7 +14,7 @@ export function createCacheEndpoint(app: FastifyInstance, verifyJwt: Auth0JwtVer
         reply.unauthorized("Must be logged in to use this endpoint");
         return;
       } else {
-        await cache.clean();
+        await cache.cleanCachedUsers();
         return {
           status: "Cache emptied",
           date: Date.now()

@@ -1,7 +1,8 @@
 import {Business, CHUNK_SIZE} from "../endpoints/businesses";
 import {EditRequest} from "../endpoints/editRequest";
 import {
-  DocumentData, DocumentSnapshot,
+  DocumentData,
+  DocumentSnapshot,
   FieldValue,
   Firestore,
   Query,
@@ -9,6 +10,7 @@ import {
   Timestamp,
   Transaction
 } from "@google-cloud/firestore";
+import {LIFETIME_MILLISECONDS} from "../auth0";
 
 export interface IdObject {
   id: string
@@ -51,12 +53,39 @@ export interface DataLayer {
   updateEditRequest(body: EditRequest): Promise<EditRequest>;
   addIndustries(industries: string[]): Promise<void[]>;
   deleteIndustries(industries: string[]) : Promise<any[]>;
+  getUserInfo(cacheKey: string): Promise<any>;
+  setUserInfo(cacheKey: string, userData: any): Promise<void>;
+  cleanCachedUsers(): Promise<void>;
 }
 
 export class ProductionDataLayer implements DataLayer {
   firestore: Firestore;
   constructor(firestore: Firestore) {
     this.firestore = firestore;
+  }
+
+  async getUserInfo(cacheKey: string): Promise<any> {
+      let userData = (await this.firestore.collection("userInfo").doc(cacheKey).get()).data();
+      if(!!userData && userData.expires > Date.now()) {
+        return userData.metadata;
+      } else {
+        await this.firestore.collection("userInfo").doc(cacheKey).delete();
+      }
+      return null;
+  }
+
+  async setUserInfo(cacheKey: string, userData: any): Promise<void> {
+    await this.firestore.collection("userInfo").doc(cacheKey).set({
+      "expires": Date.now() + LIFETIME_MILLISECONDS,
+      "metadata": userData
+    });
+  }
+
+  async cleanCachedUsers(): Promise<void> {
+    let cachedItems = await this.firestore.collection("userInfo").listDocuments();
+    for(let item of cachedItems) {
+      item.delete().then(_ => {});
+    }
   }
 
   async getBusinessById(id: string): Promise<Business | null> {
@@ -360,6 +389,5 @@ export class ProductionDataLayer implements DataLayer {
       return {};
     }
   }
-
 }
 

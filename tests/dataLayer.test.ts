@@ -355,4 +355,15 @@ describe("Production Data Layer Integration Tests", () => {
       done();
     });
   });
+
+  it("Can cache, retrieve, and delete a long token", async(done) => {
+    const longToken = "a".repeat(500);
+    const dummyData = {data: "Dummy"};
+    expect(await productionDataLayer.getUserInfo(longToken)).toBe(null);
+    await productionDataLayer.setUserInfo(longToken, dummyData);
+    expect(await productionDataLayer.getUserInfo(longToken)).toStrictEqual(dummyData);
+    await productionDataLayer.cleanCachedUsers();
+    expect(await productionDataLayer.getUserInfo(longToken)).toBe(null);
+    done();
+  });
 });

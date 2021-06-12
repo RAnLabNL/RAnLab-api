@@ -1,6 +1,5 @@
 import fastify, {FastifyInstance} from "fastify";
 import fastifySensible from "fastify-sensible";
-import {Memcached, ResponseCode} from "memcached-node";
 import {IMock, It, Mock, Times} from "typemoq"
 
 import {addRoutes} from "../src/utils";
@@ -10,12 +9,13 @@ import {createBusinessesEndpoint} from "../src/endpoints/businesses";
 import {authenticateToTestDomain, getEmptyCacheJwtVerifier, setupAuth0TestEnv} from "./testUtils/testify";
 import {DummyRegion} from "./testUtils/dummyData";
 import {DataLayer} from "../src/database/productionDataLayer";
-import {Auth0JwtVerifier, getJwtVerifier, LIFETIME_SECONDS} from "../src/auth0";
+import {Auth0JwtVerifier, getJwtVerifier} from "../src/auth0";
 import {getUserIdFromAuth0} from "../src/dependencies/auth0Api";
 
 
 describe("Auth0 unit tests", () => {
-  const TEST_AUTH_HEADER = "Test";
+  const TEST_AUTH_TOKEN = "Test"
+  const TEST_AUTH_HEADER = `Bearer ${TEST_AUTH_TOKEN}`;
   const TEST_USER_ID = "testUser";
   const TEST_AUTH0_ID = "auth0|" + TEST_USER_ID
   const TEST_ROLE = "testRole";
@@ -25,30 +25,21 @@ describe("Auth0 unit tests", () => {
     admin: false
   };
   let infoGetter = async (_: string) => "";
-  let mockIdGetter: IMock<(authHeader: string) => Promise<string>> = Mock.ofInstance(infoGetter);
-  let mockRoleGetter: IMock<(userId: string) => Promise<string>> = Mock.ofInstance(infoGetter);
-  const badCache = new Memcached("127.0.0.1:11211");
-  const mockCache: IMock<Memcached> = Mock.ofInstance(badCache);
 
   let sut : Auth0JwtVerifier;
+  let mockIdGetter: IMock<(authHeader: string) => Promise<string>>;
+  let mockRoleGetter: IMock<(userId: string) => Promise<string>>;
+  let mockCache: IMock<DataLayer>;
 
   beforeEach(() => {
+    mockIdGetter = Mock.ofInstance(infoGetter);
+    mockRoleGetter = Mock.ofInstance(infoGetter);
+    mockCache = Mock.ofType<DataLayer>();
     sut = getJwtVerifier(mockCache.object, mockIdGetter.object, mockRoleGetter.object);
   });
 
   it("Pulls cached credentials first", async () => {
-    mockCache.setup(c => c.get(It.isAnyString()))
-      .returns((_: string) =>
-        Promise.resolve({
-          code: ResponseCode.EXISTS,
-          data: {
-            [TEST_AUTH_HEADER]: {
-              key: TEST_AUTH_HEADER,
-              value: JSON.stringify(testData)
-            }
-          }
-        })
-      );
+    mockCache.setup(c => c.getUserInfo(It.isAnyString())).returns((_: string) => Promise.resolve(testData));
     mockIdGetter.setup(g => g(It.isAnyString())).returns(_ => Promise.resolve(TEST_AUTH0_ID));
     mockRoleGetter.setup(g => g(It.isAnyString())).returns(_ => Promise.resolve(TEST_ROLE));
 
@@ -58,14 +49,15 @@ describe("Auth0 unit tests", () => {
     mockRoleGetter.verify(g => g("dummyUser"), Times.never())
   });
 
-  it("Fetches from auth0 when not cached", async () => {
-    mockCache.setup(c => c.get(It.isAnyString())).returns((_: string) => Promise.resolve({code: ResponseCode.NOT_FOUND}));
+  it("Fetches from auth0 and adds to cache when not initially cached", async () => {
+    mockCache.setup(c => c.getUserInfo(TEST_AUTH_HEADER)).returns((_: string) => Promise.resolve(null));
+    mockCache.setup(c => c.setUserInfo(TEST_AUTH_HEADER, It.isAny()));
     mockIdGetter.setup(g => g(It.isAnyString())).returns(_ => Promise.resolve(TEST_AUTH0_ID));
     mockRoleGetter.setup(g => g(It.isAnyString())).returns(_ => Promise.resolve(TEST_ROLE));
 
     let data = await sut({ headers: { authorization: TEST_AUTH_HEADER } });
     expect(data).toStrictEqual(testData);
-    mockCache.verify(c => c.add(TEST_AUTH_HEADER, testData, {expires: LIFETIME_SECONDS}), Times.once());
+    mockCache.verify(c => c.setUserInfo(TEST_AUTH_TOKEN, It.isValue(testData)), Times.once());
     mockIdGetter.verify(g => g(TEST_AUTH_HEADER), Times.once());
     mockRoleGetter.verify(g => g(TEST_AUTH0_ID), Times.once())
   });

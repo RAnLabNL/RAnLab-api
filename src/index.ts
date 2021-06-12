@@ -14,10 +14,6 @@ import {createEditEndpoint} from "./endpoints/editRequest";
 import {productionFirestore} from "./database/firestore";
 import createUsersEndpoint from "./endpoints/users";
 import {createCacheEndpoint} from "./endpoints/cache";
-import {Memcached} from "memcached-node";
-
-let productionCache = new Memcached("127.0.0.1:11211", {wait:true});
-productionCache.createPool();
 
 let productionDataLayer = new ProductionDataLayer(productionFirestore)
 const port = Number(process.env.PORT || 8080);
@@ -26,7 +22,7 @@ server.register(fastifySensible);
 registerSwagger(server);
 registerCorsHandler(server);
 
-let prodJwtVerifier = getJwtVerifier(productionCache);
+let prodJwtVerifier = getJwtVerifier(productionDataLayer);
 addRoutes(
   server,
   createPingEndpoint,
@@ -35,7 +31,7 @@ addRoutes(
   (app: FastifyInstance) => createBusinessesEndpoint(app, productionDataLayer, prodJwtVerifier),
   (app: FastifyInstance) => createEditEndpoint(app, productionDataLayer, prodJwtVerifier),
   (app: FastifyInstance) => createUsersEndpoint(app, prodJwtVerifier),
-  (app: FastifyInstance) => createCacheEndpoint(app, prodJwtVerifier, productionCache)
+  (app: FastifyInstance) => createCacheEndpoint(app, prodJwtVerifier, productionDataLayer)
 );
 
 server.listen(port, '::', (err, address) => {

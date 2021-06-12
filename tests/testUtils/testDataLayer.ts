@@ -7,6 +7,8 @@ export class DummyDatalayer implements DataLayer {
   regions: Region[] = [];
   editRequests: EditRequest[] = [];
   industries: string[] = [];
+  key: string = "";
+  data: any = null;
 
   async getBusinessById(id: string): Promise<Business | null> {
     return this.businesses.find((b) => b.id === id) || null;
@@ -122,16 +124,28 @@ export class DummyDatalayer implements DataLayer {
     return Promise.resolve([]);
   }
 
+  async getUserInfo(key: string): Promise<any> {
+    if (this.key === key) {
+      return this.data;
+    }
+    return null;
+  }
+  async setUserInfo(key: string, data: any): Promise<void> {
+    this.key = key;
+    this.data = data;
+  }
+
+  async cleanCachedUsers(): Promise<void> {
+    this.key = "";
+    this.data = null;
+  }
+
   getPaginatedEditRequests(pageSize: number, afterId: string | undefined, filter: (r: EditRequest) => boolean) {
     this.editRequests.reverse();
     let startIndex = !!afterId? this.editRequests.findIndex((r) => r.id === afterId) + 1 : 0;
     let ret =  this.editRequests.filter(filter).slice(startIndex, startIndex + pageSize);
     this.editRequests.reverse();
     return ret;
-  }
-
-  clearRegions() {
-    this.regions = [];
   }
 
 }
