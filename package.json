@@ -22,7 +22,7 @@
     "node": ">=12"
   },
   "dependencies": {
-    "fastify": "^3.5.1"
+    "fastify": "^3.29.4"
   },
   "devDependencies": {
     "@types/node": "^12.12.67",
